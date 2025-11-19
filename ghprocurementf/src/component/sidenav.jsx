@@ -54,7 +54,7 @@ const Sidenav = ({ onPagechange }) => {
   return (
     <>
       <div className="flex flex-col h-screen bg-darkblue md:w-62 w-20 ">
-        <div className="py-5 px-2 text-center border border-darkblue border-b-gray text-white">
+        <div className="flex justify-center py-5 px-2 text-center border border-darkblue border-b-gray text-white">
           <img src={Logo} className="h-9 w-40  object-cover " />
         </div>
         <div className="mt-3 space-y-2">
