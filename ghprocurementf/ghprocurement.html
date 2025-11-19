@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novyra CMS - Sidebar Dashboard</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #6c63ff;
+        --secondary: #ff6584;
+        --success: #00c49a;
+        --danger: #ff4c4c;
+        --light: #f0f1f5;
+        --dark: #1f1d2b;
+        --glass: rgba(255, 255, 255, 0.15);
+        --transition: all 0.3s ease;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #e3f2fd, #fce4ec);
+        color: var(--dark);
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 250px;
+        background: var(--dark);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem 1rem;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+      }
+
+      .sidebar .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .sidebar .logo i {
+        margin-right: 0.5rem;
+        color: var(--primary);
+      }
+
+      .sidebar a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        margin: 0.8rem 0;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: var(--transition);
+        cursor: pointer;
+      }
+
+      .sidebar a.active,
+      .sidebar a:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      /* Main content */
+      .main {
+        margin-left: 250px;
+        flex: 1;
+        padding: 2rem;
+      }
+
+      /* Section styling */
+      .section {
+        display: none;
+      }
+
+      .section.active {
+        display: block;
+      }
+
+      h2 {
+        margin-bottom: 1rem;
+      }
+
+      /* Stats cards */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .card {
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: var(--transition);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .card i {
+        font-size: 2rem;
+      }
+
+      .card .info h3 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+
+      .card .info p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--dark);
+        opacity: 0.7;
+      }
+
+      /* Table */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        background: var(--glass);
+        border-radius: 10px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+      }
+
+      th,
+      td {
+        padding: 0.8rem 1rem;
+        text-align: left;
+      }
+
+      th {
+        color: var(--dark);
+        opacity: 0.8;
+      }
+
+      tr:hover {
+        background: rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+      }
+
+      /* Blog & Portfolio cards */
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .card-content {
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        overflow: hidden;
+        transition: var(--transition);
+      }
+
+      .card-content img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+      }
+
+      .card-content .body {
+        padding: 1rem;
+      }
+
+      .card-content .body h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.1rem;
+      }
+
+      .card-content .body p {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.85rem;
+        opacity: 0.8;
+      }
+
+      .card-content .meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--dark);
+        opacity: 0.6;
+      }
+
+      /* Floating Add Button */
+      .fab {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: var(--secondary);
+        color: white;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        transition: var(--transition);
+      }
+
+      .fab:hover {
+        transform: scale(1.1);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 70px;
+          padding: 1rem 0.5rem;
+        }
+        .sidebar a span {
+          display: none;
+        }
+        .main {
+          margin-left: 70px;
+          padding: 1rem;
+        }
+        .stats {
+          grid-template-columns: 1fr;
+        }
+        .cards-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="logo">
+        <i class="fas fa-rocket"></i><span>Novyra CMS</span>
+      </div>
+      <a class="active" data-section="dashboard"
+        ><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a
+      >
+      <a data-section="blog"><i class="fas fa-blog"></i><span>Blog</span></a>
+      <a data-section="portfolio"
+        ><i class="fas fa-briefcase"></i><span>Portfolio</span></a
+      >
+      <a data-section="users"><i class="fas fa-users"></i><span>Users</span></a>
+      <a data-section="settings"
+        ><i class="fas fa-cog"></i><span>Settings</span></a
+      >
+    </div>
+
+    <div class="main">
+      <!-- Dashboard -->
+      <div id="dashboard" class="section active">
+        <h2>Dashboard</h2>
+        <div class="stats">
+          <div class="card">
+            <i class="fas fa-blog" style="color: var(--primary)"></i>
+            <div class="info">
+              <h3>24</h3>
+              <p>Blog Posts</p>
+            </div>
+          </div>
+          <div class="card">
+            <i class="fas fa-briefcase" style="color: var(--success)"></i>
+            <div class="info">
+              <h3>15</h3>
+              <p>Portfolio Items</p>
+            </div>
+          </div>
+          <div class="card">
+            <i class="fas fa-users" style="color: var(--secondary)"></i>
+            <div class="info">
+              <h3>8</h3>
+              <p>Users</p>
+            </div>
+          </div>
+          <div class="card">
+            <i class="fas fa-eye" style="color: var(--danger)"></i>
+            <div class="info">
+              <h3>2.4K</h3>
+              <p>Monthly Views</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blog -->
+      <div id="blog" class="section">
+        <h2>Blog Posts</h2>
+        <div class="cards-grid">
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=Social+Media+Trends"
+              alt=""
+            />
+            <div class="body">
+              <h3>10 Social Media Trends 2025</h3>
+              <p>By Sarah Johnson</p>
+              <div class="meta">
+                <span>Marketing</span><span>Nov 10, 2025</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=SEO+Strategies"
+              alt=""
+            />
+            <div class="body">
+              <h3>SEO Strategies That Actually Work</h3>
+              <p>By Michael Chen</p>
+              <div class="meta"><span>SEO</span><span>Nov 5, 2025</span></div>
+            </div>
+          </div>
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=Brand+Identity"
+              alt=""
+            />
+            <div class="body">
+              <h3>Building a Brand Identity</h3>
+              <p>By Emily Rodriguez</p>
+              <div class="meta">
+                <span>Branding</span><span>Oct 30, 2025</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolio -->
+      <div id="portfolio" class="section">
+        <h2>Portfolio</h2>
+        <div class="cards-grid">
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=Tech+Solutions+Website"
+              alt=""
+            />
+            <div class="body">
+              <h3>Tech Solutions Website</h3>
+              <p>Complete website redesign for a tech startup.</p>
+              <div class="meta">
+                <span>Web Design</span><span>Oct 2025</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=BrandFuture+Campaign"
+              alt=""
+            />
+            <div class="body">
+              <h3>BrandFuture Campaign</h3>
+              <p>Social media marketing campaign for a fashion launch.</p>
+              <div class="meta">
+                <span>Social Media</span><span>Sep 2025</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-content">
+            <img
+              src="https://via.placeholder.com/400x140.png?text=E-commerce+SEO"
+              alt=""
+            />
+            <div class="body">
+              <h3>E-commerce SEO</h3>
+              <p>SEO optimization for an online retailer.</p>
+              <div class="meta"><span>SEO</span><span>Aug 2025</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div id="users" class="section">
+        <h2>Users</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Michael Admin</td>
+              <td>michael@novyra.com</td>
+              <td>Admin</td>
+              <td>Active</td>
+            </tr>
+            <tr>
+              <td>Sarah Johnson</td>
+              <td>sarah@novyra.com</td>
+              <td>Editor</td>
+              <td>Active</td>
+            </tr>
+            <tr>
+              <td>Michael Chen</td>
+              <td>michael.c@novyra.com</td>
+              <td>Author</td>
+              <td>Active</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Settings -->
+      <div id="settings" class="section">
+        <h2>Settings</h2>
+        <div class="cards-grid">
+          <div class="card-content">
+            <div class="body">
+              <h3>Site Settings</h3>
+              <p>Update site title, tagline, and description.</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="body">
+              <h3>SEO Settings</h3>
+              <p>Manage meta titles, descriptions, and keywords.</p>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="body">
+              <h3>Security Settings</h3>
+              <p>Configure two-factor authentication and session timeouts.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fab"><i class="fas fa-plus"></i></div>
+
+    <script>
+      const links = document.querySelectorAll(".sidebar a");
+      const sections = document.querySelectorAll(".section");
+
+      links.forEach((link) => {
+        link.addEventListener("click", () => {
+          links.forEach((l) => l.classList.remove("active"));
+          link.classList.add("active");
+
+          const target = link.getAttribute("data-section");
+          sections.forEach((sec) => {
+            sec.classList.remove("active");
+            if (sec.id === target) sec.classList.add("active");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
