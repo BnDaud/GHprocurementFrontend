@@ -1,67 +1,220 @@
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Card from "../component/card";
+import useFetch from "../hooks/usefetch";
+import { globalContext } from "../App";
+import API from "../endpoints/endpoints";
+import { AiOutlineLoading } from "react-icons/ai";
+import Modal from "../component/modal";
 
 function Portfolio() {
+  const url = API.portfolio;
+  const loadingIcon = (
+    <AiOutlineLoading className="text-amber-600 text-4xl animate-spin" />
+  );
   const containerstyle =
     "relative w-70 bg-white h-120 rounded-lg space-y-2 p-3 transition-all hover:-translate-y-1 duration-800 hover:shadow-2xl ease-in-out";
-  const dummyDate = [
-    {
-      topic: "TechSolutions Website",
-      containerstyle: containerstyle,
-      logostyle: "rounded-lg w-full h-60 object-cover",
-      description:
-        "Complete website redesign and digital marketing strategy for a tech startup.",
-      category: "Web Design",
-      year: "Oct 2023",
-      logo: "https://img.freepik.com/premium-psd/simple-lake-16-bit-pixel-with-waves-reflections-geom-y2k-shape-neon-color-art-collections_1142283-95680.jpg?semt=ais_incoming&w=740&q=80",
-    },
-    {
-      topic: "GreenLeaf App",
-      containerstyle: containerstyle,
-      logostyle: "rounded-lg w-full h-60 object-cover",
-      description:
-        "Mobile app development and UI/UX design for a sustainable living platform.",
-      category: "App Design",
-      year: "Jan 2024",
-      logo: "https://img.freepik.com/free-vector/green-leaf-logo-design_53876-113488.jpg?w=740&t=st=1700292467~exp=1700293067~hmac=ce9d246c6d3cf1d9de2c21e42de3c67a29003c165f2ed2c2f27c5d1267f42a73",
-    },
-    {
-      topic: "CryptoVault Dashboard",
-      containerstyle: containerstyle,
-      logostyle: "rounded-lg w-full h-60 object-cover",
-      description:
-        "Dashboard interface for cryptocurrency portfolio tracking with real-time analytics.",
-      category: "Web App",
-      year: "Mar 2024",
-      logo: "https://img.freepik.com/free-vector/cryptocurrency-dashboard-illustration_23-2148897898.jpg?w=740&t=st=1700292502~exp=1700293102~hmac=b7fa18e8f08c23f3b77c3e9fa7c6c7e07f89a464c7c1b5a5a7a1238fbc60d49c",
-    },
-    {
-      topic: "PixelArt Portfolio",
-      containerstyle: containerstyle,
-      logostyle: "rounded-lg w-full h-60 object-cover",
-      description:
-        "Portfolio showcase for a digital artist with pixel-art creations.",
-      category: "Portfolio",
-      year: "Jun 2023",
-      logo: "https://img.freepik.com/free-vector/pixel-art-background_52683-43949.jpg?w=740&t=st=1700292541~exp=1700293141~hmac=2f81e7e5b5e7a5f1b6bb1b0b1c7c09b0d8421fa57b6f8a1e7f2df9aaf1b48d1d",
-    },
+
+  const { data, loading, err, doFetch } = useFetch();
+  const { portfolios, setPortfolios } = useContext(globalContext);
+  useEffect(() => {
+    doFetch({ url: url(), method: "GET" });
+  }, []);
+
+  useEffect(() => {
+    if (data) setPortfolios(data);
+  }, [data]);
+
+  const [addNew, setAddNew] = useState(false);
+  const toggleaddnew = () => {
+    setAddNew(!addNew);
+  };
+  // Form field styles and options
+  const [portfolioData, setPortfolioData] = useState({
+    title: "",
+    client_name: "",
+    description: "",
+    category: "",
+    thumbnail: null,
+    images: [],
+    status: "",
+    date_completed: "",
+  });
+
+  const updatePortfolioData = (arg, newdata) =>
+    setPortfolioData((prev) => ({ ...prev, [arg]: newdata }));
+
+  const inputStyle =
+    "bg-amber-300 px-3 py-2 border border-amber-400 rounded w-full focus:outline-none focus:ring-2 focus:ring-amber-400";
+
+  const categories = [
+    "DIGITAL MARKETING",
+    "SEO OPTIMIZATION",
+    "AI MARKETING",
+    "BRAND STRATEGY",
+    "WEB DESIGN",
+    "SOCIAL MEDIA",
+    "EMAIL CAMPAIGNS",
+    "INFLUENCER MARKETING",
+    "CONTENT CREATION",
+    "PAID ADVERTISING",
+  ];
+
+  const statusOptions = ["Draft", "Published"];
+
+  const fields = [
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Title</label>
+      <input
+        placeholder="Title"
+        className={inputStyle}
+        required
+        value={portfolioData.title}
+        onChange={(e) => updatePortfolioData("title", e.target.value)}
+      />
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Client Name</label>
+      <input
+        placeholder="Client Name"
+        className={inputStyle}
+        required
+        value={portfolioData.client_name}
+        onChange={(e) => updatePortfolioData("client_name", e.target.value)}
+      />
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Description</label>
+      <textarea
+        placeholder="Description"
+        className={`${inputStyle} h-24`}
+        required
+        value={portfolioData.description}
+        onChange={(e) => updatePortfolioData("description", e.target.value)}
+      />
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Category</label>
+      <select
+        className={inputStyle}
+        required
+        value={portfolioData.category}
+        onChange={(e) => updatePortfolioData("category", e.target.value)}
+      >
+        <option value="" disabled>
+          Select Category
+        </option>
+        {categories.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        ))}
+      </select>
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Thumbnail</label>
+      <input
+        type="file"
+        accept="image/*"
+        className={inputStyle}
+        onChange={(e) => updatePortfolioData("thumbnail", e.target.files[0])}
+      />
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Portfolio Images</label>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        className={inputStyle}
+        onChange={(e) => updatePortfolioData("images", [...e.target.files])}
+      />
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Status</label>
+      <select
+        className={inputStyle}
+        required
+        value={portfolioData.status}
+        onChange={(e) => updatePortfolioData("status", e.target.value)}
+      >
+        <option value="" disabled>
+          Select Status
+        </option>
+        {statusOptions.map((status) => (
+          <option key={status} value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
+    </div>,
+
+    <div className="w-full">
+      <label className="font-semibold mb-1 block">Date Completed</label>
+      <input
+        type="datetime-local"
+        className={inputStyle}
+        value={portfolioData.date_completed}
+        onChange={(e) => updatePortfolioData("date_completed", e.target.value)}
+      />
+    </div>,
   ];
 
   return (
-    <div className=" bg-light rounded-2xl min-h-50 shadow-2xl p-6 ">
-      <div className="flex flex-wrap justify-between gap-6 mt-2 mb-5 border-b pb-5 border-gray/30">
-        {" "}
-        <p className="text-3xl font-bold">Portfolio</p>{" "}
-        <div className="bg-blue-700 text-white p-2 rounded hover:cursor-pointer transition duration-500 ease-in-out hover:-translate-y-1  hover:shadow-2xl">
-          Add New Item
+    <>
+      {" "}
+      {addNew ? (
+        <Modal
+          togglestate={toggleaddnew}
+          fields={fields}
+          payload={portfolioData} //data structure to be submit
+          method={"POST"}
+          url={url()}
+          dataTobeUpdated={portfolios}
+          updatedata={setPortfolios}
+          buttonstyle={
+            "bg-amber-500 text-white py-2 px-6 rounded-lg font-semibold hover:bg-amber-600 transition w-full md:w-auto"
+          }
+          incrementkey={"TotalPortfolio"}
+        />
+      ) : null}
+      <div className=" bg-light rounded-2xl min-h-50 shadow-2xl p-6 ">
+        <div className="flex flex-wrap justify-between gap-6 mt-2 mb-5 border-b pb-5 border-gray/30">
+          {" "}
+          <p className="text-3xl font-bold">Portfolio</p>{" "}
+          <div
+            className="bg-blue-700 text-white p-2 rounded hover:cursor-pointer transition duration-500 ease-in-out hover:-translate-y-1  hover:shadow-2xl"
+            onClick={toggleaddnew}
+          >
+            Add New Item
+          </div>
+        </div>
+        <div
+          className={`flex flex-wrap gap-4 items-center ${
+            !data ? "h-100" : ""
+          }  justify-center`}
+        >
+          {data
+            ? portfolios.map((data, idx) => (
+                <Card
+                  key={idx}
+                  logostyle={"rounded-lg w-full h-60 object-cover"}
+                  description={data.description}
+                  containerstyle={containerstyle}
+                  topic={data.title}
+                  category={data.category}
+                  year={data.created_at}
+                />
+              ))
+            : loadingIcon}
         </div>
       </div>
-      <div className="flex flex-wrap gap-4   justify-center">
-        {dummyDate.map((data, idx) => (
-          <Card key={idx} {...data} />
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 

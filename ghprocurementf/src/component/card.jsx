@@ -10,15 +10,22 @@ function Card({
   category,
   year,
 }) {
+  function formatDate(dateString) {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const options = { day: "2-digit", month: "short" }; // "23 Oct"
+    return date.toLocaleDateString("en-US", options);
+  }
+
   return (
     <div className={containerstyle}>
-      {total ? (
+      {!topic ? (
         <div className={logostyle}> {logo}</div>
       ) : (
         <img src={logo} alt="" className={logostyle} />
       )}
       <div>
-        <div className="text-3xl font-bold"> {total || topic}</div>
+        <div className="text-3xl font-bold"> {topic || total}</div>
         <div className="text-gray text-wrap mt-1">{description}</div>
       </div>
       <div
@@ -29,7 +36,7 @@ function Card({
         }`}
       >
         <p> {category}</p>
-        <p>{year}</p>
+        <p>{formatDate(year)}</p>
       </div>
     </div>
   );
