@@ -4,7 +4,7 @@ import { FaBlog } from "react-icons/fa";
 import { FaBriefcase } from "react-icons/fa";
 import { FaUsers } from "react-icons/fa";
 import { IoMdSettings } from "react-icons/io";
-import Logo from "./../images/logo.png";
+import Logo from "./../images/Logo.png";
 
 const Sidenav = ({ onPagechange }) => {
   const classes = "  text-xl";
@@ -53,10 +53,11 @@ const Sidenav = ({ onPagechange }) => {
 
   return (
     <>
-      <div className="flex flex-col h-screen bg-sidenav/70 md:w-62 w-20 ">
-        <div className="py-5 px-2 text-center  border-b-2 text-purple">
+      <div className="flex flex-col h-screen bg-sidenav/70 md:w-62 w-20 pt-2">
+        <div className="flex justify-center items-center h-15 py-5 px-1 text-center  border-b-2 text-purple">
           {" "}
-          <img />
+          <img src={Logo} className="w-40 h-40 hidden md:block" />
+          <p className="font-bold md:hidden"> Gh Pro</p>
         </div>
         <div className="mt-3 space-y-2">
           {activescroll.map((item) => (
