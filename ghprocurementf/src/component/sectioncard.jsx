@@ -186,7 +186,7 @@ function SectionCard({
         ) : (
           <div className="flex justify-center items-center h-full w-full  ">
             {" "}
-            <AiOutlineLoading className="text-3xl text-amber-600 animate-spin" />{" "}
+            <AiOutlineLoading className="text-3xl text-purple animate-spin" />{" "}
           </div>
         )}
       </div>
