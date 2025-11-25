@@ -78,7 +78,7 @@ function SectionCard({
           dataTobeUpdated={tbody}
           updatedata={updatedata}
           buttonstyle={
-            "bg-amber-500 text-white py-2 px-6 rounded-lg font-semibold hover:bg-amber-600 transition w-full md:w-auto"
+            "bg-purple text-sidenav py-2 px-6 rounded-lg  hover:font-semibold transition duration-500 hover:-translate-y-0.5 ease-in-out w-full md:w-auto"
           }
           incrementkey={incrementkey}
         />
@@ -121,9 +121,9 @@ function SectionCard({
       ) : null}
       <div className="flex flex-wrap justify-between gap-6 mt-2 mb-5 border-b pb-5 border-gray/30">
         {" "}
-        <p className="text-3xl font-bold">{name}</p>{" "}
+        <p className="text-3xl font-bold text-purple">{name}</p>{" "}
         <div
-          className="bg-blue-700 text-white p-2 rounded hover:cursor-pointer transition duration-300 ease-in-out hover:-translate-y-0.2  hover:shadow-2xl"
+          className="bg-purple text-sidenav p-2 rounded hover:cursor-pointer hover:font-semibold transition duration-300 ease-in-out hover:-translate-y-0.2  hover:shadow-2xl"
           onClick={toggleaddnew}
         >
           {button}

@@ -4,6 +4,7 @@ import { FaBlog } from "react-icons/fa";
 import { FaBriefcase } from "react-icons/fa";
 import { FaUsers } from "react-icons/fa";
 import { IoMdSettings } from "react-icons/io";
+import Logo from "./../images/logo.png";
 
 const Sidenav = ({ onPagechange }) => {
   const classes = "  text-xl";
@@ -52,10 +53,10 @@ const Sidenav = ({ onPagechange }) => {
 
   return (
     <>
-      <div className="flex flex-col h-screen bg-sidenav md:w-62 w-20 ">
-        <div className="py-5 px-2 text-center border border-darkblue border-b-gray text-purple">
+      <div className="flex flex-col h-screen bg-sidenav/70 md:w-62 w-20 ">
+        <div className="py-5 px-2 text-center  border-b-2 text-purple">
           {" "}
-          GHpro
+          <img />
         </div>
         <div className="mt-3 space-y-2">
           {activescroll.map((item) => (
@@ -65,16 +66,26 @@ const Sidenav = ({ onPagechange }) => {
                 changeactivescroll(item.id);
                 onPagechange(item.id);
               }}
-              className={`flex hover:text-white text-gray-300 hover:bg-gray/30 h-10 
+              className={`flex hover:text-purple text-black/40 hover:bg-gray/30 h-10 
          
-              ${item.active ? "border-blue-600 border-l-[3px]" : "border-l-0"}`}
+              ${
+                item.active
+                  ? "border-purple border-l-[3px] font-semibold"
+                  : "border-l-0"
+              }`}
             >
               <div className="flex md:mx-10 mx-auto items-center gap-4">
-                <div className={`${item.active ? "text-blue-600" : ""}`}>
+                <div className={`${item.active ? "text-purple" : ""}`}>
                   {" "}
                   {item.logo}
                 </div>
-                <p className="hidden md:block">{item.name}</p>
+                <p
+                  className={`hidden md:block ${
+                    item.active ? "text-purple" : ""
+                  }  `}
+                >
+                  {item.name}
+                </p>
               </div>
             </div>
           ))}

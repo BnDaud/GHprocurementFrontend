@@ -120,7 +120,7 @@ function Modal({
       onClick={togglestate}
     >
       <div
-        className="bg-white w-full max-w-2xl rounded-xl shadow-lg overflow-y-auto max-h-[80vh] p-6"
+        className="bg-sidenav w-full max-w-2xl rounded-xl shadow-lg overflow-y-auto max-h-[80vh] p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

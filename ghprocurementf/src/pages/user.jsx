@@ -44,7 +44,7 @@ function User() {
   const roles = ["Admin", "Viewer", "Editor"];
 
   const inputStyle =
-    "bg-light/60 px-3 py-2 border border-blue-400 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-400";
+    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
 
   const userFields = [
     <div className="w-full">

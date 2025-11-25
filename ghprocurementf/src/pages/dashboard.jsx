@@ -35,16 +35,14 @@ const DashBoard = () => {
 
   const isLoading = totalLoading || blogsLoading;
 
-  const loadingIcon = (
-    <AiOutlineLoading className="text-amber-600 animate-spin" />
-  );
+  const loadingIcon = <AiOutlineLoading className="text-purple animate-spin" />;
 
   const [card, setCard] = useState([
     {
       name: "TotalBlogs",
-      logo: <FaBlog className="text-2xl text-blue-600" />,
+      logo: <FaBlog className="text-2xl text-purple" />,
       logostyle:
-        "flex items-center justify-center bg-blue-100 size-15 rounded-2xl ",
+        "flex items-center justify-center bg-purple/10 size-15 rounded-2xl ",
       total: 0,
       description: "Blog Posts",
     },
@@ -123,7 +121,7 @@ const DashBoard = () => {
     setBlogData((prev) => ({ ...prev, [arg]: newdata }));
 
   const inputStyle =
-    "bg-amber-300 px-3 py-2 border border-amber-400 rounded w-full focus:outline-none focus:ring-2 focus:ring-amber-400";
+    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
 
   const categories = [
     "DIGITAL MARKETING",
@@ -237,7 +235,7 @@ const DashBoard = () => {
 
   return (
     <div className="bg-light rounded-2xl min-h-50 shadow-2xl p-6">
-      <p className="text-4xl font-bold mb-4">Dashboard</p>
+      <p className="text-4xl font-bold mb-4 text-purple ">Dashboard</p>
 
       <div className="flex flex-wrap gap-4 justify-center-safe">
         {card.map((item) => (

@@ -72,16 +72,16 @@ function Settings() {
   }, [data]);
 
   return (
-    <div className="bg-light rounded-2xl min-h-50 shadow-2xl p-6">
+    <div className="bg-sidenav rounded-2xl min-h-50 shadow-2xl p-6">
       <div className="mt-2 mb-5 border-b pb-3 border-gray/30">
-        <p className="text-3xl font-bold">Settings</p>
+        <p className="text-3xl font-bold text-purple">Settings</p>
         <div className="flex md:gap-x-5 mt-5">
           {tabs.map((tab) => (
             <p
               key={tab.name}
               onClick={() => setActiveTab(tab.name)}
               className={`font-semibold px-2 py-1 cursor-pointer ${
-                activeTab === tab.name ? "text-blue-700" : "text-gray"
+                activeTab === tab.name ? "text-purple" : "text-gray"
               }`}
             >
               {tab.name}
@@ -97,9 +97,9 @@ function Settings() {
       <div
         className={`flex ${
           JSON.stringify(oldmeta) === JSON.stringify(meta)
-            ? "bg-blue-700"
-            : "bg-red-700"
-        } gap-5 w-40 h-10 mt-5 justify-center items-center text-white p-2 rounded hover:cursor-pointer transition duration-500 ease-in-out hover:-translate-y-1  hover:shadow-2xl`}
+            ? "bg-purple"
+            : "bg-red-700  hover:-translate-y-1 hover:cursor-pointer"
+        } gap-5 w-40 h-10 mt-5 justify-center items-center text-sidenav p-2 rounded  transition duration-500 ease-in-out  hover:shadow-2xl`}
         onClick={handlepost}
       >
         {loading ? (

@@ -21,7 +21,7 @@ const Blog = () => {
     setBlogData((prev) => ({ ...prev, [arg]: newdata }));
 
   const inputStyle =
-    "bg-amber-300 px-3 py-2 border border-amber-400 rounded w-full focus:outline-none focus:ring-2 focus:ring-amber-400";
+    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
 
   const categories = [
     "DIGITAL MARKETING",
