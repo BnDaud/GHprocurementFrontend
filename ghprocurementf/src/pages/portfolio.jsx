@@ -9,7 +9,7 @@ import Modal from "../component/modal";
 function Portfolio() {
   const url = API.portfolio;
   const loadingIcon = (
-    <AiOutlineLoading className="text-amber-600 text-4xl animate-spin" />
+    <AiOutlineLoading className="text-purple text-4xl animate-spin" />
   );
   const containerstyle =
     "relative w-70 bg-white h-120 rounded-lg space-y-2 p-3 transition-all hover:-translate-y-1 duration-800 hover:shadow-2xl ease-in-out";
@@ -46,18 +46,7 @@ function Portfolio() {
   const inputStyle =
     "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
 
-  const categories = [
-    "DIGITAL MARKETING",
-    "SEO OPTIMIZATION",
-    "AI MARKETING",
-    "BRAND STRATEGY",
-    "WEB DESIGN",
-    "SOCIAL MEDIA",
-    "EMAIL CAMPAIGNS",
-    "INFLUENCER MARKETING",
-    "CONTENT CREATION",
-    "PAID ADVERTISING",
-  ];
+  const categories = ["FURNITURE", "ELECTRONICS"];
 
   const statusOptions = ["Draft", "Published"];
 
