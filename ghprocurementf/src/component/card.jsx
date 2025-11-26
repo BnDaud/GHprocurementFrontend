@@ -22,7 +22,7 @@ function Card({
       {!topic ? (
         <div className={logostyle}> {logo}</div>
       ) : (
-        <img src={logo} alt="" className={logostyle} />
+        <img src={logo.url} alt="" className={logostyle} />
       )}
       <div>
         <div className="text-3xl font-bold"> {topic || total}</div>
