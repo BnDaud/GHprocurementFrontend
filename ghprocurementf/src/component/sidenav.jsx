@@ -56,8 +56,10 @@ const Sidenav = ({ onPagechange }) => {
       <div className="flex flex-col h-screen bg-sidenav/70 md:w-62 w-20 pt-2">
         <div className="flex justify-center items-center h-15 py-5 px-1 text-center  border-b-2 text-purple">
           {" "}
-          <img src={Logo} className="w-40 h-40 hidden md:block" />
-          <p className="font-bold md:hidden"> Gh Pro</p>
+          <img
+            src={Logo}
+            className="md:w-40 md:h-40 size-20  object-contain  "
+          />
         </div>
         <div className="mt-3 space-y-2">
           {activescroll.map((item) => (

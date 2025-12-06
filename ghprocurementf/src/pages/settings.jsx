@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
-import General from "../component/general";
+import Metadata from "../component/metadata";
 import SEO from "../component/seo";
-import SocialMedia from "../component/socialmedia";
+import Contact from "../component/contact";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
@@ -13,7 +13,7 @@ function Settings() {
   const url = API.metadata;
 
   const { data, err, loading, doFetch } = useFetch();
-  const [activeTab, setActiveTab] = useState("General");
+  const [activeTab, setActiveTab] = useState("Metadata");
   const [submit, setSubmit] = useState(false);
 
   const updateMeta = (name, newvalue) => {
@@ -26,7 +26,7 @@ function Settings() {
 
   useEffect(() => {
     if (submit) {
-      doFetch({ url: url(2), method: "PUT", body: meta });
+      doFetch({ url: url(1), method: "PUT", body: meta });
       console.log(meta);
       console.log("data from BE", data);
       setOldmeta(meta);
@@ -34,32 +34,23 @@ function Settings() {
   }, [submit]);
   const tabs = [
     {
-      name: "General",
+      name: "Metadata",
       component: (
-        <General meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
+        <Metadata meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
       ),
     },
+
     {
-      name: "SEO",
+      name: "Contact",
       component: (
-        <SEO meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
-      ),
-    },
-    {
-      name: "SocialMedia",
-      component: (
-        <SocialMedia
-          meta={meta}
-          updateMeta={updateMeta}
-          handlepost={handlepost}
-        />
+        <Contact meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
       ),
     },
   ];
 
   useEffect(() => {
     doFetch({
-      url: url(2),
+      url: url(1),
       method: "GET",
     });
   }, []);
@@ -68,6 +59,7 @@ function Settings() {
     if (data) {
       setMeta(data);
       setOldmeta(data);
+      console.log(data);
     }
   }, [data]);
 

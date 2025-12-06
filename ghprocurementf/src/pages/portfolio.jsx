@@ -192,7 +192,7 @@ function Portfolio() {
             ? portfolios.map((data, idx) => (
                 <Card
                   key={idx}
-                  logo={data.thumbnail}
+                  logo={data.thumbnail} // check this part for image display
                   logostyle={"rounded-lg w-full h-60 object-cover"}
                   description={data.description}
                   containerstyle={containerstyle}
