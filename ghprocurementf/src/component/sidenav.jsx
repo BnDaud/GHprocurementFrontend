@@ -23,7 +23,7 @@ const Sidenav = ({ onPagechange }) => {
     },
     {
       id: 3,
-      name: "Portfolio",
+      name: "Services",
       logo: <FaBriefcase className={classes} />,
       active: false,
     },

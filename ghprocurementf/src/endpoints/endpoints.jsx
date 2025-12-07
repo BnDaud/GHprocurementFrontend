@@ -10,6 +10,8 @@ const API = {
 
   blogs: (arg = "") => `${BASEURL}/blogs${arg && "/" + arg}/?format=json`,
   metadata: (arg = "") => `${BASEURL}/metadata${arg && "/" + arg}/?format=json`,
+  faqs: (arg = "") => `${BASEURL}/faqs${arg && "/" + arg}/?format=json`,
+  services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
 };
 
 export default API;
