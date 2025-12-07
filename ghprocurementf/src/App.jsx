@@ -41,6 +41,7 @@ function App() {
     TotalPortfolio: 0,
     TotalUsers: 0,
     TotalServices: 0,
+    TotalFaq: 0,
   });
   const [allusers, setAllUsers] = useState([]);
   const [allfaqs, setAllFaqs] = useState([]);

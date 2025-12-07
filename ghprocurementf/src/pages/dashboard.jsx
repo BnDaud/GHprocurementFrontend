@@ -3,7 +3,13 @@ import Card from "../component/card";
 import SectionCard from "../component/sectioncard";
 
 import { AiOutlineLoading } from "react-icons/ai";
-import { FaBlog, FaBriefcase, FaUsers, FaEye } from "react-icons/fa";
+import {
+  FaBlog,
+  FaBriefcase,
+  FaUsers,
+  FaEye,
+  FaQuestionCircle,
+} from "react-icons/fa";
 
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
@@ -63,12 +69,12 @@ const DashBoard = () => {
       description: "Users",
     },
     {
-      name: "TotalViews",
-      logo: <FaEye className="text-2xl text-red-600" />,
+      name: "TotalFaq",
+      logo: <FaQuestionCircle className="text-2xl text-red-600" />,
       logostyle:
         "flex items-center justify-center bg-red-100 size-15 rounded-2xl ",
-      total: 24, // static for now
-      description: "Monthly Views",
+      total: 0, // static for now
+      description: "FAQs",
     },
   ]);
 

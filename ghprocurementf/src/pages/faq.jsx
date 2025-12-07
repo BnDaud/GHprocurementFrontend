@@ -74,7 +74,7 @@ const Faqs = () => {
             url={API.faq}
             updatepayload={setFaqsData}
             updatedata={setAllFaqs}
-            incrementkey={"Totalfaq"}
+            incrementkey={"TotalFaq"}
           />
         </div>
       </div>
