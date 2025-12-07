@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Procurement Website UI</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #f8f9fb;
+  color: #1d1d1f;
+}
+
+/* NAVBAR */
+nav {
+  background: white;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+nav ul {
+  display: flex;
+  gap: 25px;
+  list-style: none;
+}
+
+nav a {
+  text-decoration: none;
+  color: #1d1d1f;
+  font-weight: 600;
+}
+
+nav a:hover {
+  color: #0561d4;
+}
+
+/* HERO SECTION */
+#home {
+  padding: 70px 50px;
+  text-align: center;
+  background: linear-gradient(135deg, #0b63d6, #1289ff);
+  color: white;
+}
+
+#home h1 {
+  font-size: 45px;
+}
+
+#home p {
+  max-width: 600px;
+  margin: auto;
+  font-size: 18px;
+}
+
+.section {
+  padding: 50px;
+}
+
+/* SECTION TITLE */
+.section-title {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+/* ---------- Slider (Homepage Portfolio Preview) ---------- */
+.slider-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.slider {
+  display: flex;
+  gap: 12px;
+  transition: transform 0.5s ease;
+}
+
+.slide-item {
+  min-width: 300px;
+  height: 180px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(18,24,32,0.09);
+}
+
+.slide-caption {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.65));
+  color: white;
+  font-weight: 700;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Slider buttons */
+.slide-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #fff;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+
+.slide-btn.left { left: 8px; }
+.slide-btn.right { right: 8px; }
+
+.slide-btn:hover {
+  background: #0b63d6;
+  color: #fff;
+}
+
+/* SERVICES */
+.service-box {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+/* BLOG */
+.blog-item {
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+
+/* CONTACT */
+form input, form textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background: #0b63d6;
+  color: white;
+  padding: 12px 25px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #084ea8;
+}
+
+/* FAQ */
+.faq-item {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+/* LIVE CHAT */
+#chat-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  background: #0b63d6;
+  color: white;
+  padding: 16px 20px;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(0,0,0,.18);
+  z-index: 50;
+}
+
+#chat-window {
+  position: fixed;
+  bottom: 80px;
+  right: 30px;
+  width: 300px;
+  height: 360px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  display: none;
+  flex-direction: column;
+}
+
+#chat-window textarea {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  resize: none;
+}
+
+#chat-window input {
+  padding: 12px;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <h2>ProcureX</h2>
+  <ul>
+    <li><a href="#home">Home</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#portfolio">Portfolio</a></li>
+    <li><a href="#blog">Blog</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HOME / HERO -->
+<section id="home">
+  <h1>Smart & Reliable Procurement Services</h1>
+  <p>Your trusted partner for global sourcing, logistics, supply management, and contract procurement.</p>
+</section>
+
+<!-- PORTFOLIO SLIDER PREVIEW -->
+<section class="section">
+  <h2 class="section-title">Featured Portfolio</h2>
+
+  <div class="slider-container">
+    <button class="slide-btn left" onclick="slidePrev()">‹</button>
+
+    <div class="slider" id="portfolio-slider">
+      <div class="slide-item" style="background-image:url('https://images.unsplash.com/photo-1581091222561-4a2f9b66d3b6?auto=format&fit=crop&w=800&q=60')">
+        <div class="slide-caption">Medical Supplies — Global</div>
+      </div>
+
+      <div class="slide-item" style="background-image:url('https://images.unsplash.com/photo-1581091012184-62e9a89f8e9f?auto=format&fit=crop&w=800&q=60')">
+        <div class="slide-caption">Retail Fixtures — Regional</div>
+      </div>
+
+      <div class="slide-item" style="background-image:url('https://images.unsplash.com/photo-1556742400-b5c7bbf0a3b2?auto=format&fit=crop&w=800&q=60')">
+        <div class="slide-caption">Manufacturing Parts — Contract</div>
+      </div>
+    </div>
+
+    <button class="slide-btn right" onclick="slideNext()">›</button>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section id="services" class="section">
+  <h2 class="section-title">Our Services</h2>
+
+  <div class="service-box">Global Sourcing</div>
+  <div class="service-box">Supplier Management</div>
+  <div class="service-box">Logistics Coordination</div>
+  <div class="service-box">Contract Negotiation</div>
+  <div class="service-box">Procurement Consulting</div>
+</section>
+
+<!-- PORTFOLIO PAGE -->
+<section id="portfolio" class="section">
+  <h2 class="section-title">Portfolio</h2>
+  <p>Here you will display your full project history, and optionally pull posts from Facebook/Twitter API.</p>
+</section>
+
+<!-- BLOG -->
+<section id="blog" class="section">
+  <h2 class="section-title">Blog & Insights</h2>
+
+  <div class="blog-item">
+    <h3>How to Reduce Procurement Costs</h3>
+    <p>Smart sourcing decisions can save up to 30%...</p>
+  </div>
+
+  <div class="blog-item">
+    <h3>Choosing the Right Supplier</h3>
+    <p>Key factors to evaluate when selecting suppliers...</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="section">
+  <h2 class="section-title">FAQ</h2>
+
+  <div class="faq-item">
+    <strong>How long does procurement take?</strong><br>
+    Typically 3–14 days depending on the item.
+  </div>
+
+  <div class="faq-item">
+    <strong>Do you handle international sourcing?</strong><br>
+    Yes, globally.
+  </div>
+</section>
+
+<!-- CONTACT + REQUEST QUOTE -->
+<section id="contact" class="section">
+  <h2 class="section-title">Contact & Request Quote</h2>
+
+  <form>
+    <input type="text" placeholder="Full Name" required />
+    <input type="email" placeholder="Email" required />
+    <input type="text" placeholder="What do you want to procure?" required />
+    <textarea placeholder="Additional details"></textarea>
+    <button type="submit">Submit Request</button>
+  </form>
+</section>
+
+<!-- LIVE CHAT -->
+<div id="chat-btn" onclick="toggleChat()">💬</div>
+
+<div id="chat-window">
+  <textarea readonly>Chat with us...</textarea>
+  <input type="text" placeholder="Type a message..." />
+</div>
+
+<script>
+/* -------- SLIDER -------- */
+let sliderIndex = 0;
+
+function slideNext() {
+  const slider = document.getElementById("portfolio-slider");
+  const totalSlides = slider.children.length;
+
+  sliderIndex = (sliderIndex + 1) % totalSlides;
+  slider.style.transform = `translateX(-${sliderIndex * 320}px)`;
+}
+
+function slidePrev() {
+  const slider = document.getElementById("portfolio-slider");
+  const totalSlides = slider.children.length;
+
+  sliderIndex = (sliderIndex - 1 + totalSlides) % totalSlides;
+  slider.style.transform = `translateX(-${sliderIndex * 320}px)`;
+}
+
+setInterval(slideNext, 4000);
+
+/* -------- LIVE CHAT -------- */
+function toggleChat() {
+  const chatWindow = document.getElementById("chat-window");
+  chatWindow.style.display = chatWindow.style.display === "none" 
+    ? "flex" 
+    : "none";
+}
+</script>
+
+</body>
+</html>
+

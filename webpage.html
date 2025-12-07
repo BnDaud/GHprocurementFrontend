@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ProcurePro — Procurement Services</title>
+  <meta name="description" content="ProcurePro — reliable procurement, sourcing & supplier coordination." />
+  <style>
+    /* ---------- Basic Reset ---------- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html,body { height: 100%; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#111; background:#f7f8fb; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display:block; }
+
+    /* ---------- Layout ---------- */
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+    header.site-header { background: #fff; box-shadow: 0 6px 18px rgba(18,24,32,0.06); position: sticky; top:0; z-index:40; }
+    .nav-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 24px; }
+    .brand { display:flex; align-items:center; gap:12px; font-weight:700; font-size:1.05rem; color:#0b63d6; }
+    .nav-links { display:flex; gap:14px; align-items:center; }
+    .nav-links a { padding:8px 10px; border-radius:8px; color:#333; font-weight:600; font-size:.95rem; }
+    .nav-links a.cta { background:#0b63d6; color:#fff; box-shadow: 0 6px 12px rgba(11,99,214,0.12); }
+
+    /* ---------- Hero ---------- */
+    .hero { display:grid; grid-template-columns:1fr 430px; gap:28px; align-items:center; padding:48px 0; }
+    .hero .intro h1 { font-size:2rem; line-height:1.05; margin-bottom:14px; color:#0d1b2a }
+    .hero .intro p { color:#425062; margin-bottom:18px; }
+    .btn-row { display:flex; gap:12px; }
+    .btn { padding:12px 16px; border-radius:10px; font-weight:700; cursor:pointer; border:0; }
+    .btn.primary { background:#0b63d6; color:#fff; }
+    .btn.ghost { background:transparent; border:1px solid #d7e1f6; }
+
+    .hero-stats { background:#fff; padding:20px; border-radius:12px; box-shadow: 0 6px 18px rgba(18,24,32,0.04); }
+    .stats-grid { display:flex; gap:14px; justify-content:space-between; }
+    .stat { text-align:center; padding:6px 8px; }
+    .stat .num { font-weight:800; font-size:1.2rem; color:#0b63d6; }
+    .stat .lbl { color:#7a8696; font-size:.9rem; }
+
+    /* ---------- Sections ---------- */
+    section { margin:34px 0; }
+    h2.section-title { margin-bottom:16px; color:#0e1a2b; font-size:1.2rem; }
+    .card { background:#fff; padding:18px; border-radius:12px; box-shadow: 0 6px 18px rgba(18,24,32,0.04); }
+
+    /* Services */
+    .services-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px; }
+
+    /* Portfolio */
+    .portfolio-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px; }
+    .portfolio-item { cursor:pointer; overflow:hidden; border-radius:10px; position:relative; min-height:140px; display:flex; align-items:flex-end; color:#fff; padding:12px; background-size:cover; background-position:center; }
+    .portfolio-item .overlay { background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%); padding:10px; width:100%; border-radius:10px; }
+
+    /* Blog */
+    .blog-top { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+    .search { display:flex; gap:8px; align-items:center; }
+    .search input { padding:10px 12px; border-radius:10px; border:1px solid #e6e9f2; width:260px; }
+    .posts-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:12px; }
+
+    /* Contact / RFQ */
+    .contact-grid { display:grid; grid-template-columns:1fr 420px; gap:16px; }
+    form.rfq-form { display:flex; flex-direction:column; gap:10px; }
+    input, textarea, select { padding:10px 12px; border-radius:8px; border:1px solid #e6e9f2; font-size:0.95rem; }
+    textarea { min-height:120px; resize:vertical; }
+
+    /* FAQ */
+    .faq .q { cursor:pointer; padding:12px; border-radius:10px; border:1px solid #eef2fb; margin-bottom:8px; background:#fff; display:flex; justify-content:space-between; align-items:center; }
+    .faq .a { padding:10px 14px; margin-bottom:8px; color:#334155; }
+
+    /* Footer */
+    footer { margin-top:28px; padding:20px 0; color:#6b7280; text-align:center; }
+
+    /* Modal */
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(3,7,18,0.5); z-index:120; }
+    .modal .modal-card { width:min(920px,95%); background:#fff; border-radius:12px; padding:18px; max-height:86vh; overflow:auto; }
+
+    /* Live chat widget */
+    .chat-toggle { position:fixed; right:20px; bottom:20px; width:56px; height:56px; border-radius:50%; background:#0b63d6; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 10px 30px rgba(11,99,214,0.2); z-index:110; }
+    .chat-panel { position:fixed; right:20px; bottom:90px; width:320px; max-height:420px; background:#fff; border-radius:12px; box-shadow: 0 20px 40px rgba(3,11,40,0.12); display:none; flex-direction:column; overflow:hidden; z-index:110; }
+    .chat-panel header { padding:12px; background:#0b63d6; color:#fff; font-weight:700; }
+    .chat-messages { padding:12px; flex:1; overflow:auto; background:#f6f8fb; }
+    .chat-input { padding:10px; border-top:1px solid #eef2fb; display:flex; gap:8px; }
+
+    /* Small screens */
+    @media (max-width:880px){
+      .hero { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .nav-links { display:none; }
+      .nav-hamburger { display:block; }
+    }
+    @media (min-width:881px){
+      .nav-hamburger { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ========== HEADER / NAV ========== -->
+  <header class="site-header">
+    <div class="container nav-inner">
+      <div class="brand">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <rect width="24" height="24" rx="6" fill="#0b63d6"/>
+          <path d="M6 14l3-4 3 3 5-7" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>ProcurePro</span>
+      </div>
+
+      <nav class="nav-links" aria-label="Main">
+        <a href="#home">Home</a>
+        <a href="#services">Services</a>
+        <a href="#portfolio">Portfolio</a>
+        <a href="#blog">Blog</a>
+        <a href="#contact">Contact</a>
+        <a href="#rfq" class="cta">Request Quote</a>
+      </nav>
+
+      <button class="nav-hamburger" aria-label="Open menu" onclick="toggleMobileNav()">
+        <svg width="28" height="28" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="#0b63d6" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="home" class="container">
+    <!-- ========== HERO ========== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="intro">
+        <h1 id="hero-title">Procurement made simple — sourcing, contracts, logistics.</h1>
+        <p>We source quality suppliers, negotiate contracts, and coordinate logistics so your team can focus on what matters. Trusted by procurement teams worldwide.</p>
+        <div class="btn-row">
+          <button class="btn primary" onclick="document.querySelector('#rfq').scrollIntoView({behavior:'smooth'})">Request a Quote</button>
+          <button class="btn ghost" onclick="document.querySelector('#services').scrollIntoView({behavior:'smooth'})">See Services</button>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div class="card" style="display:inline-block;">
+            <div style="font-size:.95rem; color:#334155; margin-bottom:8px;">How we help</div>
+            <div style="display:flex; gap:12px;">
+              <div style="font-weight:700; color:#0b63d6;">Supplier Vetting</div>
+              <div style="font-weight:700; color:#0b63d6;">Contract Mgmt</div>
+              <div style="font-weight:700; color:#0b63d6;">Logistics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-stats" aria-hidden>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div><strong>Trusted by</strong><div style="color:#425062; font-size:.9rem;">Manufacturing · Retail · Healthcare</div></div>
+          <div style="font-weight:700; color:#0b63d6;">Get started →</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat"><div class="num">1,250+</div><div class="lbl">Orders Completed</div></div>
+          <div class="stat"><div class="num">430</div><div class="lbl">Suppliers</div></div>
+          <div class="stat"><div class="num">12 yrs</div><div class="lbl">Average Experience</div></div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ========== SERVICES ========== -->
+    <section id="services" aria-labelledby="services-title">
+      <h2 id="services-title" class="section-title">Services</h2>
+      <div class="services-grid">
+        <div class="card">
+          <h3>Sourcing & Supplier Discovery</h3>
+          <p>Identify vetted suppliers tailored to your needs, with quality checks and price benchmarking.</p>
+        </div>
+        <div class="card">
+          <h3>Contract Negotiation</h3>
+          <p>Draft and negotiate contracts to secure favorable terms and mitigate risk.</p>
+        </div>
+        <div class="card">
+          <h3>Logistics Coordination</h3>
+          <p>Arrange shipping, customs and delivery coordination to your facility — end-to-end support.</p>
+        </div>
+        <div class="card">
+          <h3>Inventory & Order Tracking</h3>
+          <p>Track shipments and milestones; receive proactive alerts on delays and updates.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PORTFOLIO (with Social Feed Placeholder) ========== -->
+    <section id="portfolio" aria-labelledby="portfolio-title">
+      <h2 id="portfolio-title" class="section-title">Portfolio & Social Feed</h2>
+      <p style="color:#5b6776; margin-bottom:12px;">Recent projects and live social updates (placeholder). Connect your company social accounts to automatically reflect posts here.</p>
+
+      <div style="display:grid; grid-template-columns: 1fr 340px; gap:12px;">
+        <div>
+          <div class="portfolio-grid">
+            <div class="portfolio-item" style="background-image:linear-gradient(180deg,rgba(9,30,66,0.12),rgba(9,30,66,0.2)), url('https://images.unsplash.com/photo-1581091222561-4a2f9b66d3b6?auto=format&fit=crop&w=1200&q=60');" onclick="openPortfolio(1)">
+              <div class="overlay">
+                <div style="font-weight:800; font-size:1rem;">Medical Supplies — Global</div>
+                <div style="font-size:.85rem;">Bulk procurement for emergency response</div>
+              </div>
+            </div>
+
+            <div class="portfolio-item" style="background-image:linear-gradient(180deg,rgba(9,30,66,0.12),rgba(9,30,66,0.2)), url('https://images.unsplash.com/photo-1581091012184-62e9a89f8e9f?auto=format&fit=crop&w=1200&q=60');" onclick="openPortfolio(2)">
+              <div class="overlay">
+                <div style="font-weight:800; font-size:1rem;">Retail Fixtures — Regional</div>
+                <div style="font-size:.85rem;">Sourcing & on-time delivery</div>
+              </div>
+            </div>
+
+            <div class="portfolio-item" style="background-image:linear-gradient(180deg,rgba(9,30,66,0.12),rgba(9,30,66,0.2)), url('https://images.unsplash.com/photo-1556742400-b5c7bbf0a3b2?auto=format&fit=crop&w=1200&q=60');" onclick="openPortfolio(3)">
+              <div class="overlay">
+                <div style="font-weight:800; font-size:1rem;">Manufacturing Parts — Contract</div>
+                <div style="font-size:.85rem;">Complex sourcing across 4 suppliers</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+            <strong>Live social feed</strong>
+            <div style="color:#4b5563; font-size:.95rem;">Recent posts from Twitter / Facebook (connected accounts)</div>
+
+            <!--
+              PLACEHOLDER: Connect your backend to Twitter/X and Facebook Graph APIs,
+              fetch recent posts, then render them inside #social-feed.
+
+              Example approach:
+                1) Server endpoint: GET /api/social-feed
+                   - server uses Twitter/X API v2 (or oEmbed) and Facebook Page API
+                   - merges and returns normalized items: {id, source, text, date, media, link}
+                2) Frontend fetch -> render items as below.
+
+              NOTE: Twitter/X API and Facebook Graph API require auth (bearer tokens).
+            -->
+            <div id="social-feed" style="display:flex; flex-direction:column; gap:8px;">
+              <div style="padding:10px; border-radius:8px; background:#f2f6ff;">[Sample Twitter post] — 4 days ago: "Supplied 10k PPE units to Hospital A."</div>
+              <div style="padding:10px; border-radius:8px; background:#f2f6ff;">[Sample Facebook post] — 7 days ago: "Shipment arrived — thanks to our logistics partners!"</div>
+              <div style="padding:10px; border-radius:8px; background:#f2f6ff;">[Social integration instructions included in comments above]</div>
+            </div>
+
+            <small style="color:#9aa3b2;">Tip: sync posting from your CMS to auto-update this feed.</small>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Portfolio modal (opened on click) -->
+    <div class="modal" id="portfolio-modal" aria-hidden>
+      <div class="modal-card">
+        <button style="float:right; background:transparent; border:0; font-weight:700; font-size:1.1rem;" onclick="closePortfolio()">✕</button>
+        <h3 id="modal-title">Project Title</h3>
+        <p id="modal-desc" style="color:#4b5563; margin-bottom:12px;">Project details...</p>
+        <div id="modal-images" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ========== BLOG ========== -->
+    <section id="blog" aria-labelledby="blog-title">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <h2 id="blog-title" class="section-title">Blog & Insights</h2>
+        <div class="blog-top">
+          <div class="search">
+            <input id="search-input" type="search" placeholder="Search posts, keywords..." aria-label="Search posts" oninput="filterPosts()" />
+            <button class="btn ghost" onclick="document.querySelector('#blog').scrollIntoView({behavior:'smooth'})">Filter</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="posts" class="posts-grid">
+        <!-- sample posts; in production render from CMS -->
+        <article class="card post" data-title="how to build resilient supply chains">
+          <h4>How to build resilient supply chains</h4>
+          <p style="color:#475569; font-size:.95rem;">A practical guide to risk mitigation and supplier diversification.</p>
+          <a href="#" onclick="openPost(event, this)" data-content="Full article content about resilience..." style="font-weight:700; color:#0b63d6;">Read</a>
+        </article>
+
+        <article class="card post" data-title="negotiating favorable contracts 101">
+          <h4>Negotiating favorable contracts 101</h4>
+          <p style="color:#475569; font-size:.95rem;">Key clauses and negotiation tactics for procurement teams.</p>
+          <a href="#" onclick="openPost(event, this)" data-content="Full article content about contracts..." style="font-weight:700; color:#0b63d6;">Read</a>
+        </article>
+
+        <article class="card post" data-title="節約するためのベストプラクティス">
+          <h4>Cost-saving best practices</h4>
+          <p style="color:#475569; font-size:.95rem;">Practical tactics to reduce landed costs and overheads.</p>
+          <a href="#" onclick="openPost(event, this)" data-content="Full article content about cost-saving..." style="font-weight:700; color:#0b63d6;">Read</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- Post modal -->
+    <div class="modal" id="post-modal" aria-hidden>
+      <div class="modal-card">
+        <button style="float:right; background:transparent; border:0; font-weight:700; font-size:1.1rem;" onclick="closePost()">✕</button>
+        <h3 id="post-modal-title">Post</h3>
+        <div id="post-modal-body" style="color:#344155; margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ========== CONTACT + RFQ ========== -->
+    <section id="contact" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="section-title">Contact & Request For Quote (RFQ)</h2>
+
+      <div class="contact-grid">
+        <div>
+          <div class="card">
+            <h3>Contact Us</h3>
+            <p style="color:#475569;">Email: <a href="mailto:hello@procurepro.example">hello@procurepro.example</a><br>Phone: +1 (555) 123-4567</p>
+            <p style="color:#475569;">Office: 123 Procurement Lane, City</p>
+
+            <hr style="margin:12px 0; border:none; height:1px; background:#eef2fb;" />
+
+            <h4>FAQ</h4>
+            <div class="faq">
+              <div class="q" onclick="toggleFaq(this)"><span>How long does a typical procurement take?</span><span>+</span></div>
+              <div class="a" style="display:none;">Timeline varies by category; typical lead times are 2–8 weeks depending on complexity.</div>
+
+              <div class="q" onclick="toggleFaq(this)"><span>What payment methods do you accept?</span><span>+</span></div>
+              <div class="a" style="display:none;">Bank transfer, card, or payment on delivery depending on contract terms.</div>
+
+              <div class="q" onclick="toggleFaq(this)"><span>Can you manage international shipping?</span><span>+</span></div>
+              <div class="a" style="display:none;">Yes — we coordinate shipping, customs clearance, and local logistics partners.</div>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div id="rfq" class="card">
+            <h3>Request For Quote</h3>
+            <form class="rfq-form" id="rfq-form" onsubmit="submitRfq(event)">
+              <label>
+                Your name
+                <input type="text" id="rfq-name" required placeholder="Full name" />
+              </label>
+              <label>
+                Company
+                <input type="text" id="rfq-company" placeholder="Company name (optional)" />
+              </label>
+              <label>
+                Email
+                <input type="email" id="rfq-email" required placeholder="you@company.com" />
+              </label>
+              <label>
+                Item / Requirements
+                <textarea id="rfq-details" required placeholder="Describe the items, specs, budget, quantity, timeline..."></textarea>
+              </label>
+              <label>
+                Upload attachment
+                <input type="file" id="rfq-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" />
+              </label>
+              <div style="display:flex; gap:8px; margin-top:6px;">
+                <button class="btn primary" type="submit">Send RFQ</button>
+                <button class="btn ghost" type="button" onclick="document.getElementById('rfq-form').reset()">Reset</button>
+              </div>
+              <div id="rfq-result" style="color:#0b63d6; margin-top:8px; font-weight:700;"></div>
+              <small style="color:#94a3b8; display:block; margin-top:6px;">We will follow up within 48 hours (or your CMS/contact flow will handle it).</small>
+            </form>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ========== FOOTER ========== -->
+    <footer>
+      <div class="container">
+        © <span id="year"></span> ProcurePro — All rights reserved · <a href="#contact">Contact</a> · <a href="#portfolio">Portfolio</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ========== LIVE CHAT WIDGET (frontend mock) ========== -->
+  <div class="chat-toggle" role="button" aria-label="Open chat" onclick="toggleChat()">💬</div>
+  <div class="chat-panel" id="chat-panel" aria-hidden>
+    <header>Chat with ProcurePro</header>
+    <div class="chat-messages" id="chat-messages">
+      <div style="font-size:.95rem; color:#374151;">Hi! 👋 How can we help with your procurement needs today?</div>
+    </div>
+    <div class="chat-input">
+      <input id="chat-input" placeholder="Type a message..." style="flex:1; border:0; outline:none; background:transparent; padding:8px;" />
+      <button class="btn primary" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------
+    // Basic dynamic behaviors
+    // -------------------------
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Mobile nav (simple)
+    function toggleMobileNav(){
+      const nav = document.querySelector('.nav-links');
+      nav.style.display = nav.style.display === 'flex' ? '' : 'flex';
+      nav.style.flexDirection = 'column';
+      nav.style.position = 'absolute';
+      nav.style.top = '72px';
+      nav.style.right = '16px';
+      nav.style.background = '#fff';
+      nav.style.padding = '12px';
+      nav.style.borderRadius = '10px';
+      nav.style.boxShadow = '0 10px 30px rgba(3,11,40,0.08)';
+    }
+
+    // Portfolio modal demo content
+    const portfolioData = {
+      1: {
+        title: 'Medical Supplies — Global',
+        desc: 'Sourced 10k PPE units across 3 suppliers; managed QC and expedited logistics.',
+        images: [
+          'https://images.unsplash.com/photo-1581091222561-4a2f9b66d3b6?auto=format&fit=crop&w=1200&q=60'
+        ]
+      },
+      2: {
+        title: 'Retail Fixtures — Regional',
+        desc: 'Procured fixtures and coordinated phased delivery to 25 stores.',
+        images: ['https://images.unsplash.com/photo-1581091012184-62e9a89f8e9f?auto=format&fit=crop&w=1200&q=60']
+      },
+      3: {
+        title: 'Manufacturing Parts — Contract',
+        desc: 'Complex BOM sourcing across multiple suppliers with staggered delivery.',
+        images: ['https://images.unsplash.com/photo-1556742400-b5c7bbf0a3b2?auto=format&fit=crop&w=1200&q=60']
+      }
+    };
+
+    function openPortfolio(id){
+      const modal = document.getElementById('portfolio-modal');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      const d = portfolioData[id];
+      document.getElementById('modal-title').textContent = d.title;
+      document.getElementById('modal-desc').textContent = d.desc;
+      const images = document.getElementById('modal-images');
+      images.innerHTML = '';
+      d.images.forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.width = '100%';
+        img.style.borderRadius = '8px';
+        images.appendChild(img);
+      });
+      document.body.style.overflow = 'hidden';
+    }
+    function closePortfolio(){
+      const modal = document.getElementById('portfolio-modal');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    // Blog post modal
+    function openPost(e, el){
+      e.preventDefault();
+      const title = el.closest('.post').querySelector('h4').textContent;
+      const content = el.dataset.content || 'Full post content not available in this demo.';
+      document.getElementById('post-modal-title').textContent = title;
+      document.getElementById('post-modal-body').innerHTML = '<p style="white-space:pre-wrap;">' + content + '</p>';
+      const modal = document.getElementById('post-modal');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closePost(){
+      const modal = document.getElementById('post-modal');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    // Simple search/filter for Blog posts
+    function filterPosts(){
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+      document.querySelectorAll('.post').forEach(p => {
+        const t = p.dataset.title.toLowerCase();
+        p.style.display = t.includes(q) ? '' : 'none';
+      });
+    }
+
+    // RFQ form submit (demo)
+    function submitRfq(e){
+      e.preventDefault();
+      const name = document.getElementById('rfq-name').value.trim();
+      const email = document.getElementById('rfq-email').value.trim();
+      const details = document.getElementById('rfq-details').value.trim();
+      if(!name || !email || !details){
+        alert('Please complete the required fields.');
+        return;
+      }
+
+      // In production: send to your CMS / API endpoint
+      // Example:
+      // const data = new FormData(document.getElementById('rfq-form'));
+      // fetch('/api/rfq', { method:'POST', body: data })
+
+      // Demo feedback:
+      document.getElementById('rfq-result').textContent = 'RFQ submitted — thank you! We will respond shortly.';
+      document.getElementById('rfq-form').reset();
+      setTimeout(()=> document.getElementById('rfq-result').textContent = '', 5000);
+    }
+
+    // FAQ toggle
+    function toggleFaq(el){
+      const next = el.nextElementSibling;
+      const expanded = next.style.display === 'block';
+      next.style.display = expanded ? 'none' : 'block';
+      el.querySelector('span:last-child').textContent = expanded ? '+' : '−';
+    }
+
+    // Chat widget (frontend demo)
+    function toggleChat(){
+      const panel = document.getElementById('chat-panel');
+      panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+    }
+    function sendChat(){
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if(!text) return;
+      const m = document.createElement('div');
+      m.style.margin = '8px 0';
+      m.style.textAlign = 'right';
+      m.innerHTML = '<div style="display:inline-block; background:#0b63d6; color:#fff; padding:8px 10px; border-radius:10px;">' + escapeHtml(text) + '</div>';
+      document.getElementById('chat-messages').appendChild(m);
+      input.value = '';
+      // In production, send this to your chat backend or integrate a provider (Intercom / Crisp / Tawk)
+    }
+    function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Close modals when clicking outside
+    window.addEventListener('click', function(ev){
+      const modal = document.getElementById('portfolio-modal');
+      if(modal.style.display === 'flex' && ev.target === modal) closePortfolio();
+      const pModal = document.getElementById('post-modal');
+      if(pModal.style.display === 'flex' && ev.target === pModal) closePost();
+    });
+
+    // Accessibility: close modal with Esc
+    window.addEventListener('keydown', function(ev){
+      if(ev.key === 'Escape'){
+        closePortfolio();
+        closePost();
+      }
+    });
+
+    // ------------------------
+    // Integration notes (social feeds)
+    // ------------------------
+    /* 
+      How to integrate Twitter / Facebook posts into #social-feed:
+
+      1) Implement a server endpoint (recommended):
+         - GET /api/social-feed
+         - On server, use authorized calls to:
+           - Twitter/X v2 API (requires bearer token) -> user tweets, timelines, or uses oEmbed for a simpler approach.
+           - Facebook Graph API -> page posts (requires page access token)
+         - Normalize posts into JSON: [{id, source:'twitter', text, created_at, media[], url}, ...]
+         - Cache results (rate limits).
+
+      2) Frontend:
+         fetch('/api/social-feed').then(res=>res.json()).then(renderSocialFeed)
+
+      3) If you cannot call Twitter/Facebook from server:
+         - Use oEmbed where possible (limited).
+         - Or embed a social widget (Facebook Page plugin, Twitter embedded timeline) — but these come with iframes and styling constraints.
+
+      IMPORTANT: Twitter/X currently requires API keys and may have paid tiers; Facebook Graph API requires a Page access token and appropriate permissions.
+    */
+
+  </script>
+</body>
+</html>
+

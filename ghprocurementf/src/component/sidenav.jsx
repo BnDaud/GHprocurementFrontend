@@ -4,6 +4,7 @@ import { FaBlog } from "react-icons/fa";
 import { FaBriefcase } from "react-icons/fa";
 import { FaUsers } from "react-icons/fa";
 import { IoMdSettings } from "react-icons/io";
+import { FaQuestionCircle } from "react-icons/fa";
 import Logo from "./../images/Logo.png";
 
 const Sidenav = ({ onPagechange }) => {
@@ -35,6 +36,12 @@ const Sidenav = ({ onPagechange }) => {
     },
     {
       id: 5,
+      name: "FAQs ",
+      logo: <FaQuestionCircle className={classes} />,
+      active: true,
+    },
+    {
+      id: 6,
       name: "Settings",
       logo: <IoMdSettings className={classes} />,
       active: false,

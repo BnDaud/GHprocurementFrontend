@@ -7,6 +7,7 @@ import User from "./pages/user";
 import Portfolio from "./pages/portfolio";
 import useFetch from "./hooks/usefetch";
 import Services from "./pages/services";
+import Faqs from "./pages/faq";
 
 export const globalContext = createContext();
 
@@ -16,6 +17,7 @@ function App() {
   const servicesRef = useRef(null);
   const userRef = useRef(null);
   const settingRef = useRef(null);
+  const faqsRef = useRef(null);
   //useFetch({ url: "https://novyra.onrender.com/api/blogs/?format=json" });
   //  useFetch({ url: "http://localhost:8000/api/gettotal?format=json" });
   //  useFetch({ url: API.portfolio() });
@@ -24,7 +26,8 @@ function App() {
     2: blogRef,
     3: servicesRef,
     4: userRef,
-    5: settingRef,
+    5: faqsRef,
+    6: settingRef,
   };
 
   const onPagechange = (id) => {
@@ -40,7 +43,7 @@ function App() {
     TotalServices: 0,
   });
   const [allusers, setAllUsers] = useState([]);
-  const [portfolios, setPortfolios] = useState([]);
+  const [allfaqs, setAllFaqs] = useState([]);
   const [meta, setMeta] = useState({});
 
   return (
@@ -53,8 +56,8 @@ function App() {
           setTotals,
           allusers,
           setAllUsers,
-          portfolios,
-          setPortfolios,
+          allfaqs,
+          setAllFaqs,
           meta,
           setMeta,
           setAllServices,
@@ -80,6 +83,9 @@ function App() {
             <section ref={userRef}>
               {" "}
               <User />{" "}
+            </section>
+            <section ref={faqsRef}>
+              <Faqs />
             </section>
             <section ref={settingRef}>
               <Settings />{" "}
