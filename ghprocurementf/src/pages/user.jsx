@@ -8,7 +8,7 @@ import { globalContext } from "../App";
 function User() {
   const url = API.users();
   const { data, loading, err, doFetch } = useFetch();
-  const [dummyData, setDummyData] = useState([]);
+
   const { setAllUsers, allusers } = useContext(globalContext);
 
   useEffect(() => {

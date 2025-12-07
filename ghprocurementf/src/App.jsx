@@ -32,10 +32,12 @@ function App() {
   };
 
   const [allblogs, setAllBlogs] = useState([]);
+  const [allservices, setAllServices] = useState([]);
   const [total, setTotals] = useState({
     TotalBlogs: 0,
     TotalPortfolio: 0,
     TotalUsers: 0,
+    TotalServices: 0,
   });
   const [allusers, setAllUsers] = useState([]);
   const [portfolios, setPortfolios] = useState([]);
@@ -55,6 +57,8 @@ function App() {
           setPortfolios,
           meta,
           setMeta,
+          setAllServices,
+          allservices,
         }}
       >
         <div className="flex h-screen">

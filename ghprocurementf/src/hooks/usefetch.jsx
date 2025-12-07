@@ -13,13 +13,15 @@ function useFetch() {
 
     try {
       const isFormData = body instanceof FormData;
+      console.log("i got here", body);
+      console.log(isFormData);
 
       const res = await fetch(url, {
         method,
         headers: isFormData
           ? undefined
           : { "Content-Type": "application/json" },
-        body: isFormData ? body : body ? JSON.stringify(body) : null,
+        body: isFormData ? body : body ? body : null,
       });
 
       if (!res.ok) {

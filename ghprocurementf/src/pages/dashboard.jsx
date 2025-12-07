@@ -47,12 +47,12 @@ const DashBoard = () => {
       description: "Blog Posts",
     },
     {
-      name: "TotalPortfolio",
+      name: "TotalServices",
       logo: <FaBriefcase className="text-2xl text-green-600" />,
       logostyle:
         "flex items-center justify-center bg-green-100 size-15 rounded-2xl ",
       total: 0,
-      description: "Portfolio Items",
+      description: "Services",
     },
     {
       name: "TotalUsers",

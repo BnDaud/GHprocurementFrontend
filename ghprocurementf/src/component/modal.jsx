@@ -27,8 +27,6 @@ function Modal({
   const { data, loading, err, success, doFetch } = useFetch();
   useEffect(() => {
     if (submit) {
-      console.log(payload);
-
       let body = undefined;
 
       const methodSupportsBody = ["POST", "PUT", "PATCH"].includes(method);
