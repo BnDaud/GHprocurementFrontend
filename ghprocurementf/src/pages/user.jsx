@@ -128,15 +128,28 @@ function User() {
       </select>
     </div>,
     <div className="w-full">
-      <label className="font-semibold mb-1 block">Username</label>
+      <label className="font-semibold mb-1 block">Image</label>
       <input
-        placeholder="Upload a display Pic"
-        className={inputStyle}
         type="file"
         accept=".jpg, .png, .jpeg"
-        required
-        onChange={(e) => updateuserdata("dp", e.target.files[0])}
+        className={inputStyle}
+        onChange={(e) => {
+          if (e.target.files.length > 0) {
+            updateuserdata("dp", e.target.files[0]);
+          }
+        }}
       />
+      {userdata.dp && (
+        <img
+          src={
+            typeof userdata.dp === "string"
+              ? userdata.dp // existing image URL
+              : URL.createObjectURL(userdata.dp) // newly selected file
+          }
+          alt="Preview"
+          className="mt-2 w-24 h-24  object-cover border"
+        />
+      )}
     </div>,
   ];
 

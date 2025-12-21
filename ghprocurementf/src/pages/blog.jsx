@@ -78,9 +78,23 @@ const Blog = () => {
         type="file"
         accept="image/*"
         className={inputStyle}
-        required
-        onChange={(e) => updateBlogData("featured_image", e.target.files[0])}
+        onChange={(e) => {
+          if (e.target.files.length > 0) {
+            updateBlogData("featured_image", e.target.files[0]);
+          }
+        }}
       />
+      {blogData.featured_image && (
+        <img
+          src={
+            typeof blogData.featured_image === "string"
+              ? blogData.featured_image // URL from server
+              : URL.createObjectURL(blogData.featured_image) // newly uploaded file
+          }
+          alt="Preview"
+          className="mt-2 w-32 h-32 object-cover"
+        />
+      )}
     </div>,
 
     <div className="w-full">

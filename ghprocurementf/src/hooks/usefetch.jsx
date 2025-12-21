@@ -21,7 +21,7 @@ function useFetch() {
         headers: isFormData
           ? undefined
           : { "Content-Type": "application/json" },
-        body: isFormData ? body : body ? body : null,
+        body: isFormData ? body : body ? JSON.stringify(body) : null,
       });
 
       if (!res.ok) {
