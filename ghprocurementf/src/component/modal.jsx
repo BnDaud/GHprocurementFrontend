@@ -60,7 +60,7 @@ function Modal({
           });
         } else {
           // ⭐ JSON body for non-file endpoints
-          body = JSON.stringify(payload);
+          body = payload;
         }
       }
 
