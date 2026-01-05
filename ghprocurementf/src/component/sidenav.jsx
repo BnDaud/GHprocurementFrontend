@@ -5,6 +5,7 @@ import { FaBriefcase } from "react-icons/fa";
 import { FaUsers } from "react-icons/fa";
 import { IoMdSettings } from "react-icons/io";
 import { FaQuestionCircle } from "react-icons/fa";
+import { IoMdMail } from "react-icons/io";
 import Logo from "./../images/Logo.png";
 
 const Sidenav = ({ onPagechange }) => {
@@ -42,6 +43,12 @@ const Sidenav = ({ onPagechange }) => {
     },
     {
       id: 6,
+      name: "Mail",
+      logo: <IoMdMail className={classes} />,
+      active: false,
+    },
+    {
+      id: 7,
       name: "Settings",
       logo: <IoMdSettings className={classes} />,
       active: false,

@@ -12,6 +12,7 @@ const API = {
   metadata: (arg = "") => `${BASEURL}/metadata${arg && "/" + arg}/?format=json`,
   faq: (arg = "") => `${BASEURL}/faqs${arg && "/" + arg}/?format=json`,
   services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
+  emails: () => `${BASEURL}/emails/`,
 };
 
 export default API;

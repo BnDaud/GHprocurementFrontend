@@ -176,4 +176,3 @@ function User() {
 }
 
 export default User;
-/*  return Response({"TotalBlogs": blogs ,"TotalPortfolio": portfolio , "TotalUsers":user} */
