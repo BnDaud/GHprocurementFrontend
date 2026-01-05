@@ -23,8 +23,8 @@ const Faqs = () => {
 
   // Form field styles and options
   const [faqsData, setFaqsData] = useState({
-    title: "",
-    description: "",
+    question: "",
+    answer: "",
   });
 
   const updateFaqsData = (arg, newdata) =>
