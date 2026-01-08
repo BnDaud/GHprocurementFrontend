@@ -8,7 +8,7 @@ const Services = () => {
   const { allservices, setAllServices } = useContext(globalContext);
 
   const url = API.services();
-  const { data, loading, err, doFetch } = useFetch();
+  const { data, doFetch } = useFetch();
 
   useEffect(() => {
     doFetch({

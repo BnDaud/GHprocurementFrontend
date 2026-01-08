@@ -4,8 +4,7 @@ import DashBoard from "./pages/dashboard";
 import Blog from "./pages/blog";
 import Settings from "./pages/settings";
 import User from "./pages/user";
-import Portfolio from "./pages/portfolio";
-import useFetch from "./hooks/usefetch";
+
 import Services from "./pages/services";
 import Faqs from "./pages/faq";
 import Mail from "./pages/mail";
