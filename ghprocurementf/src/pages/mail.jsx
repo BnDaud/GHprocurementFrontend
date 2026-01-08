@@ -4,12 +4,13 @@ import API from "../endpoints/endpoints";
 import { AiOutlineLoading } from "react-icons/ai";
 
 function Mail() {
-  const [email, setEmail] = useState({
+  const initalState = {
     subject: "",
     recipient: "",
     body: "",
     title: "",
-  });
+  };
+  const [email, setEmail] = useState(initalState);
   const [submit, setSubmit] = useState(false);
   const { data, success, loading, doFetch } = useFetch();
   const inputstyle =
@@ -34,8 +35,17 @@ function Mail() {
     if (submit) {
       console.log("from useEffect", email);
       doFetch({ url: API.emails(), method: "POST", body: email });
+      setSubmit(false);
     }
   }, [submit]);
+
+  useEffect(() => {
+    if (success) {
+      console.log("data returned", data);
+      alert("Sent");
+      setEmail(initalState);
+    } // alert("Sent");
+  }, [data]);
 
   return (
     <div className=" bg-purple rounded-2xl min-h-50 shadow-2xl p-6 space-y-6 ">
