@@ -57,7 +57,7 @@ useEffect(() => {
     if (success) {
       console.log("data returned", data);
       alert("Sent");
-     // setEmail(initalState);
+     setEmail(initalState);
     } // alert("Sent");
   }, [data]);
 
