@@ -46,7 +46,6 @@ useEffect(() => {
         formData.append("attachments", file);
       });
     }
-   // const url = "https://ghprocurement.pythonanywhere.com/api/emails/"
     doFetch({ url: API.emails(),
        method: "POST", 
        body: formData });
