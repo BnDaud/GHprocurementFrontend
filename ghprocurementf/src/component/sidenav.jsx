@@ -39,7 +39,7 @@ const Sidenav = ({ onPagechange }) => {
       id: 5,
       name: "FAQs ",
       logo: <FaQuestionCircle className={classes} />,
-      active: true,
+      active: false,
     },
     {
       id: 6,

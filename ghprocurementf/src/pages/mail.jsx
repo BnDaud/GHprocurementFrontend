@@ -4,12 +4,14 @@ import API from "../endpoints/endpoints";
 import { AiOutlineLoading } from "react-icons/ai";
 
 function Mail() {
-  const [email, setEmail] = useState({
+  const initalState = {
     subject: "",
     recipient: "",
     body: "",
     title: "",
-  });
+    attachments :null
+  }
+  const [email, setEmail] = useState(initalState);
   const [submit, setSubmit] = useState(false);
   const { data, success, loading, doFetch } = useFetch();
   const inputstyle =
@@ -29,13 +31,37 @@ function Mail() {
       setSubmit(!submit);
     }
   };
+useEffect(() => {
+  if (submit) {
+    console.log("Sending email:", email);
 
-  useEffect(() => {
-    if (submit) {
-      console.log("from useEffect", email);
-      doFetch({ url: API.emails(), method: "POST", body: email });
+    const formData = new FormData();
+    formData.append("body", email.body);
+    formData.append("recipient", email.recipient);
+    formData.append("subject", email.subject);
+    formData.append("title", email.title);
+
+    if (email.attachments) {
+      email.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
     }
-  }, [submit]);
+   // const url = "https://ghprocurement.pythonanywhere.com/api/emails/"
+    doFetch({ url: API.emails(),
+       method: "POST", 
+       body: formData });
+    setSubmit(false);  // reset submit
+  }
+}, [submit]);
+ useEffect(() => {
+    if (success) {
+      console.log("data returned", data);
+      alert("Sent");
+     // setEmail(initalState);
+    } // alert("Sent");
+  }, [data]);
+
+
 
   return (
     <div className=" bg-purple rounded-2xl min-h-50 shadow-2xl p-6 space-y-6 ">
@@ -71,17 +97,26 @@ function Mail() {
             onChange={(e) => updateEmail("body", e.target.value)}
           />
         </div>{" "}
-        <div className="space-y-2 ">
-          <p className="font-semibold text-lg text-white"> Recipient</p>
+      <div className=" lg:flex lg:justify-between lg:gap-x-2">  <div className="space-y-2  lg:w-1/2">
+          <p className="font-semibold text-lg text-white "> Recipient</p>
           <input
             type="email"
-            className={inputstyle}
+            className={`${inputstyle}`}
             value={email.recipient}
             placeholder="@email.com"
             required
             onChange={(e) => updateEmail("recipient", e.target.value)}
           />
-        </div>
+        </div> <div className="space-y-2  lg:w-1/2">
+          <p className="font-semibold text-lg text-white"> Attachment</p>
+         <input
+  type="file"
+  multiple  // <-- allow multiple files
+  className={inputstyle}
+  onChange={(e) => updateEmail("attachments", Array.from(e.target.files))}
+/> 
+
+        </div></div>
         <div className="flex justify-end">
           <button
             type="submit"
