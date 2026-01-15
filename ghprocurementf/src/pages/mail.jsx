@@ -9,7 +9,12 @@ function Mail() {
     recipient: "",
     body: "",
     title: "",
+<<<<<<< HEAD
   };
+=======
+    attachments :null
+  }
+>>>>>>> features/email
   const [email, setEmail] = useState(initalState);
   const [submit, setSubmit] = useState(false);
   const { data, success, loading, doFetch } = useFetch();
@@ -30,14 +35,44 @@ function Mail() {
       setSubmit(!submit);
     }
   };
+useEffect(() => {
+  if (submit) {
+    console.log("Sending email:", email);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (submit) {
       console.log("from useEffect", email);
       doFetch({ url: API.emails(), method: "POST", body: email });
       setSubmit(false);
+=======
+    const formData = new FormData();
+    formData.append("body", email.body);
+    formData.append("recipient", email.recipient);
+    formData.append("subject", email.subject);
+    formData.append("title", email.title);
+
+    if (email.attachments) {
+      email.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+>>>>>>> features/email
     }
-  }, [submit]);
+    doFetch({ url: API.emails(),
+       method: "POST", 
+       body: formData });
+    setSubmit(false);  // reset submit
+  }
+}, [submit]);
+ useEffect(() => {
+    if (success) {
+      console.log("data returned", data);
+      alert("Sent");
+     // setEmail(initalState);
+    } // alert("Sent");
+  }, [data]);
+
+
 
   useEffect(() => {
     if (success) {
@@ -81,17 +116,26 @@ function Mail() {
             onChange={(e) => updateEmail("body", e.target.value)}
           />
         </div>{" "}
-        <div className="space-y-2 ">
-          <p className="font-semibold text-lg text-white"> Recipient</p>
+      <div className=" lg:flex lg:justify-between lg:gap-x-2">  <div className="space-y-2  lg:w-1/2">
+          <p className="font-semibold text-lg text-white "> Recipient</p>
           <input
             type="email"
-            className={inputstyle}
+            className={`${inputstyle}`}
             value={email.recipient}
             placeholder="@email.com"
             required
             onChange={(e) => updateEmail("recipient", e.target.value)}
           />
-        </div>
+        </div> <div className="space-y-2  lg:w-1/2">
+          <p className="font-semibold text-lg text-white"> Attachment</p>
+         <input
+  type="file"
+  multiple  // <-- allow multiple files
+  className={inputstyle}
+  onChange={(e) => updateEmail("attachments", Array.from(e.target.files))}
+/> 
+
+        </div></div>
         <div className="flex justify-end">
           <button
             type="submit"
