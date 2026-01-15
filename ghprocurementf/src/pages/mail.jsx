@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { AiOutlineLoading } from "react-icons/ai";
@@ -9,12 +9,8 @@ function Mail() {
     recipient: "",
     body: "",
     title: "",
-<<<<<<< HEAD
-  };
-=======
     attachments :null
   }
->>>>>>> features/email
   const [email, setEmail] = useState(initalState);
   const [submit, setSubmit] = useState(false);
   const { data, success, loading, doFetch } = useFetch();
@@ -39,13 +35,6 @@ useEffect(() => {
   if (submit) {
     console.log("Sending email:", email);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    if (submit) {
-      console.log("from useEffect", email);
-      doFetch({ url: API.emails(), method: "POST", body: email });
-      setSubmit(false);
-=======
     const formData = new FormData();
     formData.append("body", email.body);
     formData.append("recipient", email.recipient);
@@ -56,8 +45,8 @@ useEffect(() => {
       email.attachments.forEach((file) => {
         formData.append("attachments", file);
       });
->>>>>>> features/email
     }
+   
     doFetch({ url: API.emails(),
        method: "POST", 
        body: formData });
@@ -73,14 +62,6 @@ useEffect(() => {
   }, [data]);
 
 
-
-  useEffect(() => {
-    if (success) {
-      console.log("data returned", data);
-      alert("Sent");
-      setEmail(initalState);
-    } // alert("Sent");
-  }, [data]);
 
   return (
     <div className=" bg-purple rounded-2xl min-h-50 shadow-2xl p-6 space-y-6 ">
