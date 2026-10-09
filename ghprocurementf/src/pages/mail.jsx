@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { LuPaperclip, LuSend, LuX, LuCircleCheck } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
@@ -70,7 +70,18 @@ function Mail() {
     recipient_name: "",
     valid_days: "",
   };
-  const [email, setEmail] = useState(initalState);
+  // "Reply" in the Inbox opens this page with the sender and subject filled in
+  const reply = useLocation().state?.reply;
+  const [email, setEmail] = useState(() =>
+    reply
+      ? {
+          ...initalState,
+          recipient: String(reply.recipient || ""),
+          recipient_name: String(reply.recipient_name || ""),
+          subject: String(reply.subject || ""),
+        }
+      : initalState
+  );
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(false);
   const [sentReference, setSentReference] = useState("");

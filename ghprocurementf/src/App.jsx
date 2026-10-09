@@ -68,12 +68,16 @@ function App() {
   useEffect(() => {
     if (!authed) return;
     refreshInbox();
-    const timer = setInterval(refreshInbox, 60000);
-    const onFocus = () => refreshInbox();
-    window.addEventListener("focus", onFocus);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshInbox();
+    }, 10000); // a tiny request: new mail shows within ~10 seconds
+    const onShow = () => document.visibilityState === "visible" && refreshInbox();
+    window.addEventListener("focus", onShow);
+    document.addEventListener("visibilitychange", onShow);
     return () => {
       clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", onShow);
+      document.removeEventListener("visibilitychange", onShow);
     };
   }, [authed]);
 
