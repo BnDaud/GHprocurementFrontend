@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { authHeaders, notifyUnauthorized } from "../auth/auth";
 
 function useFetch() {
   const [data, setData] = useState(null);
   const [success, setSuccess] = useState(false); // ⭐ new
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [errDetail, setErrDetail] = useState(null); // what the server said, if it said anything
 
   const doFetch = async ({ url, method = "GET", body }) => {
     setLoading(true);
     setSuccess(false); // reset
+    setErr(null); // a retry must not keep showing the previous error
+    setErrDetail(null);
     setData(null); // reset old data
 
     try {
@@ -18,11 +22,14 @@ function useFetch() {
 
       const res = await fetch(url, {
         method,
-        headers: isFormData
-          ? undefined
-          : { "Content-Type": "application/json" },
+        headers: {
+          ...authHeaders(),
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        },
         body: isFormData ? body : body ? JSON.stringify(body) : null,
       });
+
+      if (res.status === 401) notifyUnauthorized();
 
       if (!res.ok) {
         let errorData;
@@ -31,6 +38,7 @@ function useFetch() {
         } catch {
           errorData = await res.text();
         }
+        setErrDetail(errorData);
         console.error("Fetch error:", {
           status: res.status,
           statusText: res.statusText,
@@ -58,7 +66,7 @@ function useFetch() {
     }
   };
 
-  return { data, success, loading, err, doFetch };
+  return { data, success, loading, err, errDetail, doFetch };
 }
 
 export default useFetch;

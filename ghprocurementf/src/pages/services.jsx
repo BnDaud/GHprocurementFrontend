@@ -1,14 +1,17 @@
 import { useContext, useState, useEffect } from "react";
 import SectionCard from "../component/sectioncard";
+import { Field, inputClass, textareaClass } from "../component/ui";
 import { globalContext } from "../App";
 import API from "../endpoints/endpoints";
 import useFetch from "../hooks/usefetch";
+import useOpenNew from "../hooks/useopennew";
 
 const Services = () => {
   const { allservices, setAllServices } = useContext(globalContext);
+  const openNew = useOpenNew();
 
   const url = API.services();
-  const { data, doFetch } = useFetch();
+  const { data, loading, err, doFetch } = useFetch();
 
   useEffect(() => {
     doFetch({
@@ -30,55 +33,51 @@ const Services = () => {
   const updateservicesData = (arg, newdata) =>
     setservicesData((prev) => ({ ...prev, [arg]: newdata }));
 
-  const inputStyle =
-    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
-
   const fields = [
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Title</label>
+    <Field full label="Title" htmlFor="service-title">
       <input
+        id="service-title"
         placeholder="Title"
-        className={inputStyle}
+        className={inputClass}
         required
         value={servicesData.title}
         onChange={(e) => updateservicesData("title", e.target.value)}
       />
-    </div>,
+    </Field>,
 
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Description</label>
+    <Field full label="Description" htmlFor="service-description">
       <textarea
+        id="service-description"
         placeholder="Description"
-        className={`${inputStyle} h-24`}
+        className={`${textareaClass} h-32`}
         required
         value={servicesData.description}
         onChange={(e) => updateservicesData("description", e.target.value)}
       />
-    </div>,
+    </Field>,
   ];
 
   return (
-    <>
-      <div className=" bg-light rounded-2xl min-h-50 shadow-2xl p-6 ">
-        <div>
-          <SectionCard
-            name="Services"
-            button="Add New Service"
-            thead={{
-              title: "",
-              description: "",
-            }}
-            tbody={allservices}
-            fields={fields}
-            payload={servicesData}
-            url={API.services}
-            updatepayload={setservicesData}
-            updatedata={setAllServices}
-            incrementkey={"TotalServices"}
-          />
-        </div>
-      </div>
-    </>
+    <SectionCard
+      name="Services"
+      singular="service"
+      subtitle="What GH Procurement offers customers."
+      button="Add New Service"
+      thead={{
+        title: "",
+        description: "",
+      }}
+      tbody={allservices}
+      fields={fields}
+      payload={servicesData}
+      url={API.services}
+      updatepayload={setservicesData}
+      updatedata={setAllServices}
+      incrementkey={"TotalServices"}
+      loading={loading || (data === null && !err)}
+      error={!!err}
+      initialAddOpen={openNew}
+    />
   );
 };
 

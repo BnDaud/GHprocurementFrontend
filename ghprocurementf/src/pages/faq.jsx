@@ -1,11 +1,14 @@
 import { useContext, useState, useEffect } from "react";
 import SectionCard from "../component/sectioncard";
+import { Field, inputClass, textareaClass } from "../component/ui";
 import { globalContext } from "../App";
 import API from "../endpoints/endpoints";
 import useFetch from "../hooks/usefetch";
+import useOpenNew from "../hooks/useopennew";
 
 const Faqs = () => {
   const { allfaqs, setAllFaqs } = useContext(globalContext);
+  const openNew = useOpenNew();
 
   const url = API.faq();
   const { data, loading, err, doFetch } = useFetch();
@@ -30,55 +33,51 @@ const Faqs = () => {
   const updateFaqsData = (arg, newdata) =>
     setFaqsData((prev) => ({ ...prev, [arg]: newdata }));
 
-  const inputStyle =
-    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
-
   const fields = [
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Question</label>
+    <Field full label="Question" htmlFor="faq-question">
       <input
-        placeholder="how long does  ....?"
-        className={inputStyle}
+        id="faq-question"
+        placeholder="How long does shipping take?"
+        className={inputClass}
         required
         value={faqsData.question}
         onChange={(e) => updateFaqsData("question", e.target.value)}
       />
-    </div>,
+    </Field>,
 
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Answer</label>
+    <Field full label="Answer" htmlFor="faq-answer">
       <textarea
-        placeholder="3 months of  ..... "
-        className={`${inputStyle} h-24`}
+        id="faq-answer"
+        placeholder="Shipping takes about 3 weeks..."
+        className={`${textareaClass} h-32`}
         required
         value={faqsData.answer}
         onChange={(e) => updateFaqsData("answer", e.target.value)}
       />
-    </div>,
+    </Field>,
   ];
 
   return (
-    <>
-      <div className=" bg-light rounded-2xl min-h-50 shadow-2xl p-6 ">
-        <div>
-          <SectionCard
-            name="FAQs"
-            button="Add FAQs"
-            thead={{
-              question: "",
-              answer: "",
-            }}
-            tbody={allfaqs}
-            fields={fields}
-            payload={faqsData}
-            url={API.faq}
-            updatepayload={setFaqsData}
-            updatedata={setAllFaqs}
-            incrementkey={"TotalFaq"}
-          />
-        </div>
-      </div>
-    </>
+    <SectionCard
+      name="FAQs"
+      singular="FAQ"
+      subtitle="Questions customers ask most."
+      button="Add FAQ"
+      thead={{
+        question: "",
+        answer: "",
+      }}
+      tbody={allfaqs}
+      fields={fields}
+      payload={faqsData}
+      url={API.faq}
+      updatepayload={setFaqsData}
+      updatedata={setAllFaqs}
+      incrementkey={"TotalFaq"}
+      loading={loading || (data === null && !err)}
+      error={!!err}
+      initialAddOpen={openNew}
+    />
   );
 };
 

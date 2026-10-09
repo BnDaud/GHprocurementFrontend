@@ -1,52 +1,57 @@
 import React, { useContext, useEffect, useState } from "react";
 import Metadata from "../component/metadata";
-import SEO from "../component/seo";
 import Contact from "../component/contact";
+import SecurityCard from "../component/securitycard";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
-import { AiOutlineLoading } from "react-icons/ai";
+import {
+  PageHeader,
+  Spinner,
+  ErrorBanner,
+  btnPrimary,
+  btnSecondary,
+} from "../component/ui";
+
+const Section = ({ id, title, description, children }) => (
+  <section
+    aria-labelledby={id}
+    className="rounded-2xl border border-line bg-white p-5 md:p-6 flex flex-col gap-5"
+  >
+    <div>
+      <h2 id={id} className="text-lg font-extrabold">
+        {title}
+      </h2>
+      <p className="mt-1 text-[13px] text-muted">{description}</p>
+    </div>
+    {children}
+  </section>
+);
 
 function Settings() {
   const { meta, setMeta } = useContext(globalContext);
-  const [oldmeta, setOldmeta] = useState({});
+  const [oldmeta, setOldmeta] = useState(meta);
   const url = API.metadata;
 
   const { data, err, loading, doFetch } = useFetch();
-  const [activeTab, setActiveTab] = useState("Metadata");
-  const [submit, setSubmit] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const dirty = JSON.stringify(oldmeta) !== JSON.stringify(meta);
 
   const updateMeta = (name, newvalue) => {
+    setSaved(false);
     setMeta((prev) => ({ ...prev, [name]: newvalue }));
   };
 
-  const handlepost = () => {
-    if (JSON.stringify(oldmeta) != JSON.stringify(meta)) setSubmit(!submit);
+  const handlepost = (e) => {
+    e?.preventDefault();
+    if (dirty) doFetch({ url: url(1), method: "PUT", body: meta });
   };
 
-  useEffect(() => {
-    if (submit) {
-      doFetch({ url: url(1), method: "PUT", body: meta });
-      console.log(meta);
-      console.log("data from BE", data);
-      setOldmeta(meta);
-    }
-  }, [submit]);
-  const tabs = [
-    {
-      name: "Metadata",
-      component: (
-        <Metadata meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
-      ),
-    },
-
-    {
-      name: "Contact",
-      component: (
-        <Contact meta={meta} updateMeta={updateMeta} handlepost={handlepost} />
-      ),
-    },
-  ];
+  const discard = () => {
+    setMeta(oldmeta);
+    setSaved(false);
+  };
 
   useEffect(() => {
     doFetch({
@@ -55,55 +60,103 @@ function Settings() {
     });
   }, []);
 
+  // both the first load and a successful save return the current metadata
+  const [lastMethodWasSave, setLastMethodWasSave] = useState(false);
   useEffect(() => {
     if (data) {
       setMeta(data);
       setOldmeta(data);
-      console.log(data);
+      if (lastMethodWasSave) setSaved(true);
     }
   }, [data]);
 
+  const save = (e) => {
+    setLastMethodWasSave(true);
+    handlepost(e);
+  };
+
   return (
-    <div className="bg-sidenav rounded-2xl min-h-50 shadow-2xl p-6">
-      <div className="mt-2 mb-5 border-b pb-3 border-gray/30">
-        <p className="text-3xl font-bold text-purple">Settings</p>
-        <div className="flex md:gap-x-5 mt-5">
-          {tabs.map((tab) => (
-            <p
-              key={tab.name}
-              onClick={() => setActiveTab(tab.name)}
-              className={`font-semibold px-2 py-1 cursor-pointer ${
-                activeTab === tab.name ? "text-purple" : "text-gray"
-              }`}
-            >
-              {tab.name}
-            </p>
-          ))}
+    <div className="space-y-6 pb-24">
+    <form id="settings-form" onSubmit={save} noValidate className="space-y-6">
+      <PageHeader
+        title="Settings"
+        subtitle="Homepage details and contact information."
+      />
+
+      {err && (
+        <ErrorBanner>
+          Something went wrong talking to the server. Your changes are still
+          here; try again.
+        </ErrorBanner>
+      )}
+
+      <div className="flex flex-wrap items-start gap-5">
+        <div className="flex-[1_1_420px] min-w-0">
+          <Section
+            id="s-home"
+            title="Homepage"
+            description="Intro text and the numbers shown on the public site."
+          >
+            <Metadata meta={meta} updateMeta={updateMeta} />
+          </Section>
+        </div>
+        <div className="flex-[1_1_420px] min-w-0">
+          <Section
+            id="s-contact"
+            title="Contact"
+            description="How customers reach you."
+          >
+            <Contact meta={meta} updateMeta={updateMeta} />
+          </Section>
         </div>
       </div>
 
-      {/* Render active tab component */}
-      <div className="mt-4">
-        {tabs.find((tab) => tab.name === activeTab)?.component}
-      </div>
-      <div
-        className={`flex ${
-          JSON.stringify(oldmeta) === JSON.stringify(meta)
-            ? "bg-purple"
-            : "bg-red-700  hover:-translate-y-1 hover:cursor-pointer"
-        } gap-5 w-40 h-10 mt-5 justify-center items-center text-sidenav p-2 rounded  transition duration-500 ease-in-out  hover:shadow-2xl`}
-        onClick={handlepost}
-      >
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <AiOutlineLoading className="animate-spin text-white" />
-            Updating...
-          </div>
-        ) : JSON.stringify(oldmeta) !== JSON.stringify(meta) ? (
-          "Save Changes"
-        ) : (
-          "Updated"
-        )}
+    </form>
+
+    <SecurityCard />
+
+      <div className="sticky -bottom-4 md:-bottom-8 -mx-4 md:-mx-10 -mb-4 md:-mb-8 px-4 md:px-10 py-3.5 bg-white border-t border-line flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="status"
+          className={`flex items-center gap-2.5 text-sm font-semibold ${
+            dirty ? "text-[#7a4b00]" : "text-muted"
+          }`}
+        >
+          <span
+            className={`size-2 rounded-full ${
+              dirty ? "bg-[#b77a00]" : "bg-[#12633a]"
+            }`}
+          />
+          {dirty
+            ? "You have unsaved changes"
+            : saved
+            ? "Saved"
+            : "All changes saved"}
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={discard}
+            disabled={!dirty || loading}
+            className={`${btnSecondary} disabled:opacity-50`}
+          >
+            Discard
+          </button>
+          <button
+            type="submit"
+            form="settings-form"
+            disabled={!dirty || loading}
+            className={btnPrimary}
+          >
+            {loading ? (
+              <>
+                <Spinner className="text-peach" /> Saving...
+              </>
+            ) : (
+              "Save changes"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

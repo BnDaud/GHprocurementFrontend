@@ -1,283 +1,284 @@
-import { useContext, useEffect, useState } from "react";
-import Card from "../component/card";
-import SectionCard from "../component/sectioncard";
-
-import { AiOutlineLoading } from "react-icons/ai";
+import { useContext, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
-  FaBlog,
-  FaBriefcase,
-  FaUsers,
-  FaEye,
-  FaQuestionCircle,
-} from "react-icons/fa";
+  LuPackage,
+  LuBriefcase,
+  LuUsers,
+  LuCircleHelp,
+  LuPlus,
+  LuMail,
+  LuImage,
+} from "react-icons/lu";
 
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
+import { categoryLabel, secureUrl, formatPrice } from "./catalog";
+import { PageHeader, Spinner, ErrorBanner, btnPrimary } from "../component/ui";
+
+const stats = [
+  {
+    key: "TotalBlogs", // the API still calls the catalog count "TotalBlogs"
+    label: "Catalog items",
+    to: "/catalog",
+    icon: LuPackage,
+    tile: "bg-peach text-purple",
+  },
+  {
+    key: "TotalServices",
+    label: "Services",
+    to: "/services",
+    icon: LuBriefcase,
+    tile: "bg-[#e3f0f8] text-[#0b4f78]",
+  },
+  {
+    key: "TotalUsers",
+    label: "Users",
+    to: "/users",
+    icon: LuUsers,
+    tile: "bg-[#fbf0d3] text-[#7a5a00]",
+  },
+  {
+    key: "TotalFaq",
+    label: "FAQs",
+    to: "/faqs",
+    icon: LuCircleHelp,
+    tile: "bg-[#e6f2ea] text-[#12633a]",
+  },
+];
+
+const quickActions = [
+  { label: "Add a catalog item", to: "/catalog", state: { openNew: true }, icon: LuPlus },
+  { label: "Add a service", to: "/services", state: { openNew: true }, icon: LuPlus },
+  { label: "Add a FAQ", to: "/faqs", state: { openNew: true }, icon: LuPlus },
+  { label: "Send an email", to: "/mail", icon: LuMail },
+];
+
+const barColors = ["bg-purple", "bg-peach", "bg-[#0b4f78]", "bg-[#e0a21b]", "bg-[#12633a]"];
 
 const DashBoard = () => {
-  const { total, setTotals, allblogs, setAllBlogs } = useContext(globalContext);
-  // Fetch totals
+  const { total, setTotals, allcatalogs, setAllCatalogs } =
+    useContext(globalContext);
+
   const {
     data: totalData,
     loading: totalLoading,
     err: totalErr,
     doFetch: fetchTotal,
   } = useFetch();
-
-  // Fetch blogs
   const {
-    data: blogs,
-    loading: blogsLoading,
-    err: blogsErr,
-    doFetch: fetchBlogs,
+    data: items,
+    loading: itemsLoading,
+    err: itemsErr,
+    doFetch: fetchItems,
   } = useFetch();
 
-  // Trigger fetches on component mount
-  useEffect(() => {
+  const load = () => {
     fetchTotal({ url: API.gettotal(), method: "GET" });
-    fetchBlogs({ url: API.blogs(), method: "GET" });
+    fetchItems({ url: API.catalogs(), method: "GET" });
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
-  const isLoading = totalLoading || blogsLoading;
-
-  const loadingIcon = <AiOutlineLoading className="text-purple animate-spin" />;
-
-  const [card, setCard] = useState([
-    {
-      name: "TotalBlogs",
-      logo: <FaBlog className="text-2xl text-purple" />,
-      logostyle:
-        "flex items-center justify-center bg-purple/10 size-15 rounded-2xl ",
-      total: 0,
-      description: "Blog Posts",
-    },
-    {
-      name: "TotalServices",
-      logo: <FaBriefcase className="text-2xl text-green-600" />,
-      logostyle:
-        "flex items-center justify-center bg-green-100 size-15 rounded-2xl ",
-      total: 0,
-      description: "Services",
-    },
-    {
-      name: "TotalUsers",
-      logo: <FaUsers className="text-2xl text-amber-600" />,
-      logostyle:
-        "flex items-center justify-center bg-amber-100 size-15 rounded-2xl ",
-      total: 0,
-      description: "Users",
-    },
-    {
-      name: "TotalFaq",
-      logo: <FaQuestionCircle className="text-2xl text-red-600" />,
-      logostyle:
-        "flex items-center justify-center bg-red-100 size-15 rounded-2xl ",
-      total: 0, // static for now
-      description: "FAQs",
-    },
-  ]);
-
-  // Update totals when data changes
   useEffect(() => {
-    if (totalData) {
-      setTotals(totalData); // update totals
-
-      const newTotal = { ...totalData }; // use the latest totals
-      setCard((prev) =>
-        prev.map((p) => ({
-          ...p,
-          total: newTotal[p.name] ?? p.total, // use newTotal instead of stale total
-        }))
-      );
-    }
+    if (totalData) setTotals(totalData);
   }, [totalData]);
 
   useEffect(() => {
-    setTotals(total);
-    console.log(total);
-    const newTotal = { ...total }; // use the latest totals
-    setCard((prev) =>
-      prev.map((p) => ({
-        ...p,
-        total: newTotal[p.name] ?? p.total, // use newTotal instead of stale total
-      }))
-    );
-  }, [total]);
+    if (items) setAllCatalogs(items);
+  }, [items]);
 
-  // Set dummy blog data
+  // newest first when the API gives timestamps, otherwise last added first
+  const recent = useMemo(() => {
+    const list = [...allcatalogs];
+    if (list.every((i) => i.created_at)) {
+      return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
+    }
+    return list.slice(-3).reverse();
+  }, [allcatalogs]);
 
-  useEffect(() => {
-    if (blogs) setAllBlogs(blogs);
-  }, [blogs]);
-
-  // Form field styles and options
-  const [blogData, setBlogData] = useState({
-    title: "",
-    author: "",
-    content: "",
-    excerpt: "",
-    featured_image: null,
-    category: "",
-    status: "",
-    views_count: 0,
-  });
-
-  const updateBlogData = (arg, newdata) =>
-    setBlogData((prev) => ({ ...prev, [arg]: newdata }));
-
-  const inputStyle =
-    "bg-purple/20 px-3 py-2  rounded w-full focus:outline-none focus:ring-2 focus:ring-purple/50";
-
-  const categories = ["FURNITURE", "ELECTRONICS"];
-  const statusOptions = ["Draft", "Published"];
-
-  const fields = [
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Title</label>
-      <input
-        placeholder="Title"
-        className={inputStyle}
-        required
-        value={blogData.title}
-        onChange={(e) => updateBlogData("title", e.target.value)}
-      />
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Author</label>
-      <input
-        placeholder="Author"
-        className={inputStyle}
-        required
-        value={blogData.author}
-        onChange={(e) => updateBlogData("author", e.target.value)}
-      />
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Content</label>
-      <textarea
-        placeholder="Content"
-        className={`${inputStyle} h-24`}
-        required
-        value={blogData.content}
-        onChange={(e) => updateBlogData("content", e.target.value)}
-      />
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Excerpt</label>
-      <textarea
-        placeholder="Excerpt"
-        className={`${inputStyle} h-16`}
-        required
-        value={blogData.excerpt}
-        onChange={(e) => updateBlogData("excerpt", e.target.value)}
-      />
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Image</label>
-      <input
-        type="file"
-        accept="image/*"
-        className={inputStyle}
-        onChange={(e) => {
-          if (e.target.files.length > 0) {
-            updateBlogData("featured_image", e.target.files[0]);
-          }
-        }}
-      />
-      {blogData.featured_image && (
-        <img
-          src={
-            typeof blogData.featured_image === "string"
-              ? blogData.featured_image // URL from server
-              : URL.createObjectURL(blogData.featured_image) // newly uploaded file
-          }
-          alt="Preview"
-          className="mt-2 w-32 h-32 object-cover"
-        />
-      )}
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Category</label>
-      <select
-        className={inputStyle}
-        required
-        value={blogData.category}
-        onChange={(e) => updateBlogData("category", e.target.value)}
-      >
-        <option value="" disabled>
-          Select Category
-        </option>
-        {categories.map((cat) => (
-          <option key={cat} value={cat}>
-            {cat}
-          </option>
-        ))}
-      </select>
-    </div>,
-
-    <div className="w-full">
-      <label className="font-semibold mb-1 block">Status</label>
-      <select
-        className={inputStyle}
-        required
-        value={blogData.status}
-        onChange={(e) => updateBlogData("status", e.target.value)}
-      >
-        <option value="" disabled>
-          Select Status
-        </option>
-        {statusOptions.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
-    </div>,
-  ];
+  const byCategory = useMemo(() => {
+    const counts = {};
+    allcatalogs.forEach((i) => {
+      const k = i.category || "Uncategorised";
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+  }, [allcatalogs]);
 
   return (
-    <div className="bg-light rounded-2xl min-h-50 shadow-2xl p-6">
-      <p className="text-4xl font-bold mb-4 text-purple ">Dashboard</p>
+    <div className="space-y-7">
+      <PageHeader
+        title="Dashboard"
+        subtitle="Everything on the GH Procurement site, at a glance."
+      >
+        <Link to="/catalog" state={{ openNew: true }} className={btnPrimary}>
+          <LuPlus className="text-lg" />
+          Add catalog item
+        </Link>
+      </PageHeader>
 
-      <div className="flex flex-wrap gap-4 justify-center-safe">
-        {card.map((item) => (
-          <Card
-            key={item.name}
-            logo={item.logo}
-            logostyle={item.logostyle}
-            containerstyle="flex gap-4 h-35 w-57 items-center transition duration-500 ease-in-out hover:-translate-y-1 hover:shadow-2xl bg-white p-6 rounded-2xl mb-2"
-            total={isLoading ? loadingIcon : item.total}
-            description={item.description}
-          />
+      {(totalErr || itemsErr) && (
+        <ErrorBanner onRetry={load}>
+          {itemsErr && !totalErr
+            ? "The catalog could not be loaded."
+            : "Some dashboard data could not be loaded."}
+        </ErrorBanner>
+      )}
+
+      <section
+        aria-label="Totals"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+      >
+        {stats.map(({ key, label, to, icon: Icon, tile }) => (
+          <Link
+            key={key}
+            to={to}
+            className="group flex flex-col gap-4 rounded-2xl border border-line bg-white p-4 md:p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className={`size-10 rounded-xl flex items-center justify-center ${tile}`}
+              >
+                <Icon className="text-xl" />
+              </div>
+              <span className="text-[13px] font-bold text-purple group-hover:underline">
+                View
+              </span>
+            </div>
+            <div>
+              <div
+                className="text-3xl md:text-[34px] font-extrabold leading-none tracking-tight"
+                data-testid={`stat-${key}`}
+              >
+                {totalLoading && !totalData ? <Spinner /> : total[key] ?? 0}
+              </div>
+              <div className="mt-1.5 text-sm text-muted">{label}</div>
+            </div>
+          </Link>
         ))}
-      </div>
+      </section>
 
-      <div>
-        <SectionCard
-          name="Recent Blog Posts"
-          button="Add New Blog"
-          thead={{
-            title: "",
-            author: "",
-            excerpt: "",
-            category: "",
-            status: "",
-            views_count: "",
-          }}
-          tbody={allblogs}
-          fields={fields}
-          payload={blogData}
-          url={API.blogs}
-          updatepayload={setBlogData}
-          updatedata={setAllBlogs}
-          incrementkey={"TotalBlogs"}
-        />
+      <div className="flex flex-wrap items-start gap-5">
+        <section
+          aria-labelledby="recent"
+          className="flex-[999_1_480px] min-w-0 rounded-2xl border border-line bg-white"
+        >
+          <div className="flex items-center justify-between px-5 md:px-6 py-5 border-b border-line">
+            <h2 id="recent" className="text-lg font-extrabold">
+              Recent catalog items
+            </h2>
+            <Link to="/catalog" className="text-sm font-bold text-purple hover:underline">
+              View all
+            </Link>
+          </div>
+
+          {itemsLoading && allcatalogs.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <Spinner className="text-3xl" />
+            </div>
+          ) : itemsErr && allcatalogs.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-muted">
+              The catalog could not be loaded right now.
+            </p>
+          ) : recent.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-muted">
+              No catalog items yet. Add your first one.
+            </p>
+          ) : (
+            <ul>
+              {recent.map((b) => {
+                const img = secureUrl(b.featured_image_url || b.featured_image);
+                return (
+                  <li
+                    key={b.id}
+                    className="flex items-center gap-3 md:gap-4 px-5 md:px-6 py-4 border-b border-line last:border-b-0 hover:bg-bgcolor/60"
+                  >
+                    <div className="size-12 shrink-0 rounded-[10px] bg-lilac overflow-hidden flex items-center justify-center text-purple">
+                      {typeof img === "string" && img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          loading="lazy"
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <LuImage className="text-xl" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-bold text-[15px]">{b.name}</div>
+                      <div className="truncate text-[13px] text-muted mt-0.5">
+                        {categoryLabel(b.category)}
+                        {b.min_quantity ? ` · min ${b.min_quantity}` : ""}
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold tabular-nums">
+                      {formatPrice(b.price)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <div className="flex-[1_1_300px] min-w-0 flex flex-col gap-5">
+          <section
+            aria-labelledby="bycat"
+            className="rounded-2xl border border-line bg-white px-6 py-5"
+          >
+            <h2 id="bycat" className="text-lg font-extrabold mb-4">
+              Items by category
+            </h2>
+            {byCategory.length === 0 ? (
+              <p className="text-sm text-muted">Nothing to show yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-3.5">
+                {byCategory.map(([cat, n], i) => (
+                  <li key={cat}>
+                    <div className="flex justify-between gap-3 text-sm mb-1.5">
+                      <span className="truncate">{categoryLabel(cat)}</span>
+                      <b className="font-extrabold tabular-nums">{n}</b>
+                    </div>
+                    <div className="h-2 rounded-full bg-bgcolor overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${barColors[i % barColors.length]}`}
+                        style={{ width: `${(n / allcatalogs.length) * 100}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section
+            aria-labelledby="quick"
+            className="rounded-2xl border border-peach bg-peach-50 px-6 py-5"
+          >
+            <h2 id="quick" className="text-lg font-extrabold mb-3">
+              Quick actions
+            </h2>
+            <div className="flex flex-col gap-1">
+              {quickActions.map(({ label, to, state, icon: Icon }) => (
+                <Link
+                  key={label}
+                  to={to}
+                  state={state}
+                  className="flex items-center gap-3 min-h-11 px-2.5 rounded-[10px] text-sm font-semibold hover:bg-peach-100"
+                >
+                  <Icon className="text-lg text-purple" />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

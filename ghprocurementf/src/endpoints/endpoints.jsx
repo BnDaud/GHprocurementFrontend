@@ -8,7 +8,7 @@ const API = {
   portfolio: (arg = "") =>
     `${BASEURL}/portfolio${arg && "/" + arg}/?format=json`,
 
-  blogs: (arg = "") => `${BASEURL}/blogs${arg && "/" + arg}/?format=json`,
+  catalogs: (arg = "") => `${BASEURL}/catalogs${arg && "/" + arg}/?format=json`,
   metadata: (arg = "") => `${BASEURL}/metadata${arg && "/" + arg}/?format=json`,
   faq: (arg = "") => `${BASEURL}/faqs${arg && "/" + arg}/?format=json`,
   services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
