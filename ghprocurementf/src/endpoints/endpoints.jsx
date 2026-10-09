@@ -19,6 +19,7 @@ const API = {
   inboxBulkDelete: () => `${BASEURL}/inbox/bulk-delete/`,
   inboxMarkAllRead: () => `${BASEURL}/inbox/mark-all-read/`,
   admins: (arg = "") => `${BASEURL}/admins/${arg && arg + "/"}`,
+  audit: (qs = "") => `${BASEURL}/audit/${qs}`,
   sentEmails: (arg = "") => `${BASEURL}/sent-emails/${arg && arg + "/"}`,
 };
 

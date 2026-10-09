@@ -15,6 +15,7 @@ import Login from "./pages/login";
 import { isSignedIn, signOut as clearSession, TOKEN_STORAGE_KEY, authHeaders, notifyUnauthorized } from "./auth/auth";
 import API from "./endpoints/endpoints";
 import Inbox from "./pages/inbox";
+import Activity from "./pages/activity";
 import Watermark from "./component/watermark";
 
 export const globalContext = createContext();
@@ -192,6 +193,7 @@ function App() {
               <Route path="/mail" element={<Mail />} />
               <Route path="/sent" element={<SentMail />} />
               <Route path="/inbox" element={<Inbox />} />
+              <Route path="/activity" element={<Activity />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

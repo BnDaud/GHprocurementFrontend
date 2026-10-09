@@ -10,6 +10,7 @@ import {
   LuHistory,
   LuInbox,
   LuSettings,
+  LuActivity,
   LuLogOut,
 } from "react-icons/lu";
 import { globalContext } from "../App";
@@ -45,6 +46,7 @@ export const navGroups = [
   {
     label: "System",
     items: [
+      { to: "/activity", name: "Activity", icon: <LuActivity className={iconClass} />, superOnly: true },
       { to: "/settings", name: "Settings", icon: <LuSettings className={iconClass} /> },
     ],
   },
@@ -81,6 +83,7 @@ const linkClass = ({ isActive }) =>
 
 export const NavList = ({ onNavigate }) => {
   const { inboxUnread, inboxTotal } = useContext(globalContext);
+  const isSuper = !!currentUser()?.is_super_admin;
   return (
   <nav aria-label="Main" className="flex flex-col gap-0.5">
     {navGroups.map((group, i) => (
@@ -90,7 +93,7 @@ export const NavList = ({ onNavigate }) => {
             {group.label}
           </p>
         )}
-        {group.items.map((item) => (
+        {group.items.filter((item) => !item.superOnly || isSuper).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
