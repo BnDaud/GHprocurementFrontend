@@ -57,7 +57,7 @@ function Metadata({ meta, updateMeta }) {
             onChange={(e) => updateMeta("suppliers", e.target.value)}
           />
         </Field>
-        <Field label="Years of experience" htmlFor="meta-experience">
+        <Field label="Years of experience" htmlFor="meta-experience" hint="Goes up by one on 1 January by itself. Type a new number any time to reset it.">
           <input
             id="meta-experience"
             type="number"
