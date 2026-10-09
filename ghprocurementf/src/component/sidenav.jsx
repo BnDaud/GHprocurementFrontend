@@ -8,6 +8,7 @@ import {
   LuUsers,
   LuMail,
   LuHistory,
+  LuInbox,
   LuSettings,
   LuLogOut,
 } from "react-icons/lu";
@@ -36,6 +37,7 @@ export const navGroups = [
     label: "People",
     items: [
       { to: "/users", name: "Users", icon: <LuUsers className={iconClass} /> },
+      { to: "/inbox", name: "Inbox", icon: <LuInbox className={iconClass} />, badge: "inbox" },
       { to: "/mail", name: "Mail", icon: <LuMail className={iconClass} /> },
       { to: "/sent", name: "Sent mail", icon: <LuHistory className={iconClass} /> },
     ],
@@ -71,18 +73,20 @@ export const BrandLogo = ({ width = 168 }) => {
 };
 
 const linkClass = ({ isActive }) =>
-  `flex items-center gap-2.5 h-9 px-3 rounded-lg text-[13px] transition-colors ${
+  `flex items-center gap-2.5 h-9 [@media(max-height:700px)]:h-8 px-3 rounded-lg text-[13px] transition-colors ${
     isActive
       ? "bg-purple text-peach font-bold"
       : "text-ink/70 font-semibold hover:bg-peach-100 hover:text-ink"
   }`;
 
-export const NavList = ({ onNavigate }) => (
+export const NavList = ({ onNavigate }) => {
+  const { inboxUnread } = useContext(globalContext);
+  return (
   <nav aria-label="Main" className="flex flex-col gap-0.5">
     {navGroups.map((group, i) => (
       <div key={i} className="flex flex-col gap-0.5">
         {group.label && (
-          <p className="mt-3 mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
+          <p className="mt-3 [@media(max-height:700px)]:mt-1.5 mb-1 [@media(max-height:700px)]:mb-0.5 px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
             {group.label}
           </p>
         )}
@@ -98,7 +102,19 @@ export const NavList = ({ onNavigate }) => (
               <>
                 {item.icon}
                 <span className="flex-1">{item.name}</span>
-                {isActive && <span className="size-1.5 rounded-full bg-peach" />}
+                {item.badge === "inbox" && inboxUnread > 0 && (
+                  <span
+                    aria-label={`${inboxUnread} unread`}
+                    className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      isActive ? "bg-peach text-purple" : "bg-purple text-peach"
+                    }`}
+                  >
+                    {inboxUnread > 99 ? "99+" : inboxUnread}
+                  </span>
+                )}
+                {isActive && !(item.badge === "inbox" && inboxUnread > 0) && (
+                  <span className="size-1.5 rounded-full bg-peach" />
+                )}
               </>
             )}
           </NavLink>
@@ -106,13 +122,14 @@ export const NavList = ({ onNavigate }) => (
       </div>
     ))}
   </nav>
-);
+  );
+};
 
 const Sidenav = ({ onNavigate }) => {
   const { signOut } = useContext(globalContext);
   const user = currentUser();
   return (
-  <div className="flex flex-col gap-5 h-full overflow-hidden bg-peach-50 border-r border-peach-line px-3 py-5">
+  <div className="flex flex-col gap-5 [@media(max-height:700px)]:gap-3 h-full overflow-hidden bg-peach-50 border-r border-peach-line px-3 py-5 [@media(max-height:700px)]:py-3">
     <div className="ml-1.5">
       <BrandLogo />
     </div>

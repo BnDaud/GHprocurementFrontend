@@ -14,6 +14,9 @@ const API = {
   services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
   emails: () => `${BASEURL}/emails/`,
   me: () => `${BASEURL}/auth/me/`,
+  inbox: (arg = "") => `${BASEURL}/inbox/${arg && arg + "/"}`,
+  inboxSummary: () => `${BASEURL}/inbox/summary/`,
+  inboxMarkAllRead: () => `${BASEURL}/inbox/mark-all-read/`,
   admins: (arg = "") => `${BASEURL}/admins/${arg && arg + "/"}`,
   sentEmails: (arg = "") => `${BASEURL}/sent-emails/${arg && arg + "/"}`,
 };

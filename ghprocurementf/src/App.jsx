@@ -12,7 +12,10 @@ import Faqs from "./pages/faq";
 import Mail from "./pages/mail";
 import SentMail from "./pages/sentmail";
 import Login from "./pages/login";
-import { isSignedIn, signOut as clearSession, TOKEN_STORAGE_KEY } from "./auth/auth";
+import { isSignedIn, signOut as clearSession, TOKEN_STORAGE_KEY, authHeaders, notifyUnauthorized } from "./auth/auth";
+import API from "./endpoints/endpoints";
+import Inbox from "./pages/inbox";
+import Watermark from "./component/watermark";
 
 export const globalContext = createContext();
 
@@ -31,6 +34,7 @@ function App() {
   const [meta, setMeta] = useState({});
 
   const [authed, setAuthed] = useState(isSignedIn);
+  const [inboxUnread, setInboxUnread] = useState(0);
   const [expired, setExpired] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const mainRef = useRef(null);
@@ -45,6 +49,28 @@ function App() {
     window.addEventListener("gh-session-expired", onExpired);
     return () => window.removeEventListener("gh-session-expired", onExpired);
   }, []);
+
+  // unread mail count for the sidebar badge
+  const refreshInbox = async () => {
+    try {
+      const res = await fetch(API.inboxSummary(), { headers: authHeaders() });
+      if (res.status === 401) return notifyUnauthorized();
+      if (res.ok) setInboxUnread((await res.json()).unread ?? 0);
+    } catch {
+      /* offline: keep the last number */
+    }
+  };
+  useEffect(() => {
+    if (!authed) return;
+    refreshInbox();
+    const timer = setInterval(refreshInbox, 60000);
+    const onFocus = () => refreshInbox();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [authed]);
 
   // signing out in another tab signs this one out too
   useEffect(() => {
@@ -99,9 +125,11 @@ function App() {
         setAllServices,
         allservices,
         signOut,
+        inboxUnread,
+        refreshInbox,
       }}
     >
-      <div className="flex h-screen bg-bgcolor">
+      <div className="relative flex h-screen supports-[height:100dvh]:h-dvh overflow-hidden bg-bgcolor">
         {/* desktop sidebar */}
         <div className="hidden md:block w-56 shrink-0">
           <Sidenav />
@@ -125,7 +153,8 @@ function App() {
           </div>
         )}
 
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="relative flex-1 min-w-0 flex flex-col">
+          <Watermark className="top-16 md:top-0" />
           {/* phone top bar */}
           <header className="md:hidden flex items-center justify-between h-16 px-4 bg-peach-50 border-b border-peach-line shrink-0">
             <BrandLogo width={126} />
@@ -152,6 +181,7 @@ function App() {
               <Route path="/faqs" element={<Faqs />} />
               <Route path="/mail" element={<Mail />} />
               <Route path="/sent" element={<SentMail />} />
+              <Route path="/inbox" element={<Inbox />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -3,6 +3,7 @@ import { LuEye, LuEyeOff, LuLock, LuMail, LuShieldCheck, LuArrowLeft } from "rea
 import { BrandLogo } from "../component/sidenav";
 import { login, verifyMfa } from "../auth/auth";
 import { Field, Spinner, btnPrimary, inputClass } from "../component/ui";
+import Watermark from "../component/watermark";
 
 export default function Login({ onSuccess, notice = "" }) {
   const [email, setEmail] = useState("");
@@ -77,8 +78,9 @@ export default function Login({ onSuccess, notice = "" }) {
   // ---------------- step 2: the code ----------------
   if (mfaToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bgcolor p-4">
-        <form onSubmit={submitCode} noValidate className={card}>
+      <div className="relative min-h-screen flex items-center justify-center bg-bgcolor p-4">
+      <Watermark className="!z-0" />
+        <form onSubmit={submitCode} noValidate className={`relative z-10 ${card}`}>
           {logo}
           <div className="text-center">
             <div className="mx-auto mb-3 size-11 rounded-full bg-lilac text-purple flex items-center justify-center">
@@ -158,8 +160,9 @@ export default function Login({ onSuccess, notice = "" }) {
 
   // ---------------- step 1: email + password ----------------
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bgcolor p-4">
-      <form onSubmit={submitPassword} noValidate className={card}>
+    <div className="relative min-h-screen flex items-center justify-center bg-bgcolor p-4">
+      <Watermark className="!z-0" />
+      <form onSubmit={submitPassword} noValidate className={`relative z-10 ${card}`}>
         <div className="flex flex-col items-center gap-4 text-center">
           <BrandLogo width={168} />
           <div>
