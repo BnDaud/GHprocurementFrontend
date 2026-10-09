@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   LuSearch,
   LuInbox,
@@ -8,12 +9,16 @@ import {
   LuRefreshCw,
   LuCheckCheck,
   LuReply,
+  LuTrash2,
   LuTriangleAlert,
 } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
 import { PageHeader, Spinner, ErrorBanner, btnSecondary } from "../component/ui";
+
+const dangerBtn =
+  "inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#b42318] text-white text-sm font-bold hover:bg-[#912018] disabled:opacity-60";
 
 const fmtDate = (iso) => {
   if (!iso) return "";
@@ -51,10 +56,82 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-function Message({ id, onClose, onRead }) {
+const Overlay = ({ label, onClose, children }) =>
+  createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50 p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col w-full max-w-2xl max-h-[92vh] sm:max-h-[88vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl"
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+
+// "Are you sure?" for deleting. Says plainly that Zoho is not affected.
+function ConfirmDelete({ title, what, busy, error, onConfirm, onCancel }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-ink/50 p-0 sm:p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl"
+      >
+        <div className="px-6 py-4 border-b border-line">
+          <h2 className="text-lg font-extrabold text-purple">{title}</h2>
+        </div>
+        <div className="px-6 py-5 space-y-3 text-[15px] text-ink/80">
+          <p>
+            Delete <b className="text-ink">{what}</b> from the CMS? This cannot be undone.
+          </p>
+          <p className="rounded-lg bg-[#e6f2ea] px-3 py-2 text-sm text-[#12633a]">
+            Only the CMS copy is removed. Your Zoho mailbox is not affected.
+          </p>
+          {error && (
+            <p role="alert" className="rounded-lg bg-[#fdeceb] px-3 py-2 text-sm text-[#8a1f15]">
+              {error}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-6 py-4 border-t border-line">
+          <button type="button" onClick={onCancel} className={btnSecondary}>
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} disabled={busy} className={dangerBtn}>
+            {busy ? <Spinner className="text-white text-xl" /> : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function Message({ id, onClose, onRead, onDeleted }) {
+  const navigate = useNavigate();
   const { data, loading, err, doFetch } = useFetch();
   const mark = useFetch();
+  const del = useFetch();
   const [isRead, setIsRead] = useState(true);
+  const [confirming, setConfirming] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     doFetch({ url: API.inbox(id), method: "GET" });
@@ -75,10 +152,10 @@ function Message({ id, onClose, onRead }) {
   }, [data]);
 
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
+    const onKey = (e) => e.key === "Escape" && !confirming && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, confirming]);
 
   const markUnread = async () => {
     setIsRead(false);
@@ -87,25 +164,29 @@ function Message({ id, onClose, onRead }) {
     onClose();
   };
 
-  const sender = data ? (data.from_name ? `${data.from_name} <${data.from_email}>` : data.from_email) : "";
-  const replyHref = data
-    ? `mailto:${encodeURIComponent(data.from_email)}?subject=${encodeURIComponent(
-        /^re:/i.test(data.subject) ? data.subject : `Re: ${data.subject}`
-      )}`
-    : "#";
+  useEffect(() => {
+    if (del.success && confirming) onDeleted([id]);
+  }, [del.success]);
+  useEffect(() => {
+    if (del.err) setDeleteError(del.errDetail?.detail || "Could not delete this message.");
+  }, [del.err]);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/50 p-0 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Message"
-        onClick={(e) => e.stopPropagation()}
-        className="flex flex-col w-full max-w-2xl max-h-[92vh] sm:max-h-[88vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl"
-      >
+  const sender = data ? (data.from_name ? `${data.from_name} <${data.from_email}>` : data.from_email) : "";
+  // reply with the CMS mail feature (branded template, saved in Sent mail)
+  const reply = () =>
+    navigate("/mail", {
+      state: {
+        reply: {
+          recipient: data.from_email,
+          recipient_name: data.from_name,
+          subject: /^re:/i.test(data.subject) ? data.subject : `Re: ${data.subject || ""}`.trim(),
+        },
+      },
+    });
+
+  return (
+    <>
+      <Overlay label="Message" onClose={onClose}>
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
           <h2 className="text-lg font-extrabold text-purple break-words min-w-0">
             {data ? data.subject || "(no subject)" : "Message"}
@@ -180,22 +261,43 @@ function Message({ id, onClose, onRead }) {
           ) : null}
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-6 py-4 border-t border-line">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 px-6 py-4 border-t border-line">
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteError("");
+              setConfirming(true);
+            }}
+            disabled={!data}
+            className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-[#f1c0bb] text-[#b42318] text-sm font-bold hover:bg-[#fdeceb] disabled:opacity-50 sm:mr-auto"
+          >
+            <LuTrash2 /> Delete
+          </button>
           <button type="button" onClick={markUnread} disabled={!data || !isRead} className={btnSecondary}>
             Mark as unread
           </button>
           {data && (
-            <a href={replyHref} className={btnSecondary}>
-              <LuReply /> Reply by email
-            </a>
+            <button type="button" onClick={reply} className={btnSecondary}>
+              <LuReply /> Reply
+            </button>
           )}
           <button type="button" onClick={onClose} className={btnSecondary}>
             Close
           </button>
         </div>
-      </div>
-    </div>,
-    document.body
+      </Overlay>
+
+      {confirming && (
+        <ConfirmDelete
+          title="Delete message"
+          what={`"${data?.subject || "this message"}"`}
+          busy={del.loading}
+          error={deleteError}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => del.doFetch({ url: API.inbox(id), method: "DELETE" })}
+        />
+      )}
+    </>
   );
 }
 
@@ -203,18 +305,23 @@ export default function Inbox() {
   const { refreshInbox, inboxUnread, inboxTotal } = useContext(globalContext);
   const { data, loading, err, doFetch } = useFetch();
   const markAll = useFetch();
+  const bulk = useFetch();
   const [messages, setMessages] = useState([]);
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [pendingDelete, setPendingDelete] = useState(null); // {ids:[...]} or {spam:true}
+  const [deleteError, setDeleteError] = useState("");
 
   const load = () => doFetch({ url: API.inbox(), method: "GET" });
   useEffect(() => {
     load();
-    const timer = setInterval(load, 60000); // new mail shows up without reloading
+    const timer = setInterval(load, 60000); // safety net; the counts below trigger faster reloads
     return () => clearInterval(timer);
   }, []);
-  // new mail arrived (or was read elsewhere): the sidebar counts changed, so reload the list
+
+  // new mail arrived (or was read/deleted elsewhere): the sidebar counts changed, so reload the list
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) {
@@ -223,9 +330,12 @@ export default function Inbox() {
     }
     load();
   }, [inboxTotal, inboxUnread]);
+
   useEffect(() => {
     if (data) {
       setMessages(data);
+      // forget selections of messages that no longer exist
+      setSelected((prev) => new Set([...prev].filter((id) => data.some((m) => m.id === id))));
       refreshInbox?.(); // keep the sidebar badge in step with the list
     }
   }, [data]);
@@ -238,6 +348,13 @@ export default function Inbox() {
 
   const setRead = (id, value) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, is_read: value } : m)));
+    refreshInbox?.();
+  };
+
+  const removeLocally = (ids) => {
+    const gone = new Set(ids);
+    setMessages((prev) => prev.filter((m) => !gone.has(m.id)));
+    setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
     refreshInbox?.();
   };
 
@@ -259,11 +376,47 @@ export default function Inbox() {
     });
   }, [messages, tab, query]);
 
+  const allShownSelected = shown.length > 0 && shown.every((m) => selected.has(m.id));
+  const toggle = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allShownSelected) shown.forEach((m) => next.delete(m.id));
+      else shown.forEach((m) => next.add(m.id));
+      return next;
+    });
+
+  const confirmBulk = async () => {
+    setDeleteError("");
+    await bulk.doFetch({
+      url: API.inboxBulkDelete(),
+      method: "POST",
+      body: pendingDelete.spam ? { spam: true } : { ids: pendingDelete.ids },
+    });
+  };
+  useEffect(() => {
+    if (bulk.success && pendingDelete) {
+      if (pendingDelete.spam) removeLocally(messages.filter((m) => m.is_spam).map((m) => m.id));
+      else removeLocally(pendingDelete.ids);
+      setPendingDelete(null);
+    }
+  }, [bulk.success]);
+  useEffect(() => {
+    if (bulk.err) setDeleteError(bulk.errDetail?.detail || "Could not delete.");
+  }, [bulk.err]);
+
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Inbox"
-        subtitle="Mail sent to info@ghprocurement.com. Read-only: reply from your mail app."
+        subtitle="Mail sent to info@ghprocurement.com. Open a message and press Reply to answer it from the Mail page."
       >
         <button
           type="button"
@@ -333,7 +486,50 @@ export default function Inbox() {
           </label>
         </div>
 
-        {loading && !data ? (
+        {/* selection bar */}
+        {(selected.size > 0 || (tab === "spam" && counts.spam > 0)) && (
+          <div
+            data-testid="selection-bar"
+            className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-line bg-lilac/40 text-sm"
+          >
+            {selected.size > 0 && (
+              <>
+                <span className="font-bold">{selected.size} selected</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteError("");
+                    setPendingDelete({ ids: [...selected] });
+                  }}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#b42318] text-white text-[13px] font-bold hover:bg-[#912018]"
+                >
+                  <LuTrash2 /> Delete selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="h-9 px-3 rounded-lg text-[13px] font-bold text-purple hover:bg-white"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+            {tab === "spam" && counts.spam > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteError("");
+                  setPendingDelete({ spam: true });
+                }}
+                className="ml-auto inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-[#f1c0bb] bg-white text-[#b42318] text-[13px] font-bold hover:bg-[#fdeceb]"
+              >
+                <LuTrash2 /> Delete all spam ({counts.spam})
+              </button>
+            )}
+          </div>
+        )}
+
+        {loading && messages.length === 0 && !data ? (
           <div className="flex justify-center py-16">
             <Spinner className="text-3xl" />
           </div>
@@ -353,53 +549,97 @@ export default function Inbox() {
             )}
           </div>
         ) : (
-          <ul aria-label="Messages" className="divide-y divide-line">
-            {shown.map((m) => (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(m.id)}
-                  aria-label={`Open ${m.subject || "message"} from ${m.from_name || m.from_email}`}
-                  className={`w-full text-left flex items-start gap-3 px-5 py-3.5 hover:bg-bgcolor/60 ${
-                    m.is_read ? "" : "bg-lilac/30"
-                  }`}
+          <>
+            <label className="flex items-center gap-3 px-5 py-2.5 border-b border-line text-xs font-bold uppercase tracking-wider text-muted">
+              <input
+                type="checkbox"
+                checked={allShownSelected}
+                onChange={toggleAll}
+                aria-label="Select all shown messages"
+                className="size-4 accent-purple"
+              />
+              Select all
+            </label>
+            <ul aria-label="Messages" className="divide-y divide-line">
+              {shown.map((m) => (
+                <li
+                  key={m.id}
+                  className={`flex items-start ${m.is_read ? "" : "bg-lilac/30"} ${selected.has(m.id) ? "!bg-lilac/60" : ""}`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`mt-2 size-2 shrink-0 rounded-full ${m.is_read ? "bg-transparent" : "bg-purple"}`}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className={`truncate text-sm ${m.is_read ? "font-semibold" : "font-extrabold"}`}>
-                        {m.from_name || m.from_email}
+                  <label className="shrink-0 flex items-center justify-center w-12 self-stretch cursor-pointer">
+                    <span className="sr-only">Select message from {m.from_name || m.from_email}</span>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(m.id)}
+                      onChange={() => toggle(m.id)}
+                      className="size-4 accent-purple"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(m.id)}
+                    aria-label={`Open ${m.subject || "message"} from ${m.from_name || m.from_email}`}
+                    data-unread={!m.is_read}
+                    className="min-w-0 flex-1 text-left flex items-start gap-3 pr-5 py-3.5 hover:bg-bgcolor/60"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`mt-2 size-2 shrink-0 rounded-full ${m.is_read ? "bg-transparent" : "bg-purple"}`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className={`truncate text-sm ${m.is_read ? "font-semibold" : "font-extrabold"}`}>
+                          {m.from_name || m.from_email}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted tabular-nums">{fmtDate(m.received_at)}</span>
                       </span>
-                      <span className="shrink-0 text-xs text-muted tabular-nums">{fmtDate(m.received_at)}</span>
+                      <span className={`block truncate text-sm ${m.is_read ? "text-ink/80" : "font-bold"}`}>
+                        {m.subject || "(no subject)"}
+                        {m.is_spam && (
+                          <span className="ml-2 rounded bg-[#fbf0d3] px-1.5 py-0.5 text-[11px] font-bold text-[#7a4b00]">
+                            Possible spam
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-2 text-[13px] text-muted">
+                        <span className="truncate">{m.snippet}</span>
+                        {m.attachments_count > 0 && (
+                          <span className="inline-flex shrink-0 items-center gap-1">
+                            <LuPaperclip /> {m.attachments_count}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className={`block truncate text-sm ${m.is_read ? "text-ink/80" : "font-bold"}`}>
-                      {m.subject || "(no subject)"}
-                      {m.is_spam && (
-                        <span className="ml-2 rounded bg-[#fbf0d3] px-1.5 py-0.5 text-[11px] font-bold text-[#7a4b00]">
-                          Possible spam
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-2 text-[13px] text-muted">
-                      <span className="truncate">{m.snippet}</span>
-                      {m.attachments_count > 0 && (
-                        <span className="inline-flex shrink-0 items-center gap-1">
-                          <LuPaperclip /> {m.attachments_count}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 
-      {openId && <Message id={openId} onClose={() => setOpenId(null)} onRead={setRead} />}
+      {openId && (
+        <Message
+          id={openId}
+          onClose={() => setOpenId(null)}
+          onRead={setRead}
+          onDeleted={(ids) => {
+            setOpenId(null);
+            removeLocally(ids);
+          }}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDelete
+          title={pendingDelete.spam ? "Delete all spam" : "Delete messages"}
+          what={pendingDelete.spam ? plural(counts.spam, "spam message") : plural(pendingDelete.ids.length, "message")}
+          busy={bulk.loading}
+          error={deleteError}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmBulk}
+        />
+      )}
     </div>
   );
 }
