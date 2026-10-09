@@ -12,7 +12,7 @@ import Faqs from "./pages/faq";
 import Mail from "./pages/mail";
 import SentMail from "./pages/sentmail";
 import Login from "./pages/login";
-import { isSignedIn, signOut as clearSession } from "./auth/auth";
+import { isSignedIn, signOut as clearSession, TOKEN_STORAGE_KEY } from "./auth/auth";
 
 export const globalContext = createContext();
 
@@ -44,6 +44,18 @@ function App() {
     };
     window.addEventListener("gh-session-expired", onExpired);
     return () => window.removeEventListener("gh-session-expired", onExpired);
+  }, []);
+
+  // signing out in another tab signs this one out too
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === TOKEN_STORAGE_KEY && !e.newValue) {
+        setExpired(false);
+        setAuthed(false);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // each route starts at the top, and the phone menu closes after navigating

@@ -1,6 +1,8 @@
 // Sign-in for the CMS. The API issues a signed token on login; every request
 // then carries it as `Authorization: Bearer <token>` and the API enforces it.
-// The token lives in sessionStorage, so closing the tab signs you out.
+// The token is kept in localStorage for the 12 hours the server allows, so it
+// survives closing the tab or the browser and is shared between tabs. Signing
+// out (in any tab) clears it everywhere.
 
 const BASEURL = import.meta.env.VITE_API_BASE;
 const KEY_TOKEN = "gh_cms_token";
@@ -9,14 +11,14 @@ const KEY_USER = "gh_cms_user";
 
 const read = (key) => {
   try {
-    return sessionStorage.getItem(key);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 };
 const write = (key, value) => {
   try {
-    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
   } catch {
     /* storage blocked: sign-in lasts until the page reloads */
   }
@@ -24,7 +26,7 @@ const write = (key, value) => {
 
 export function signOut() {
   try {
-    [KEY_TOKEN, KEY_EXPIRES, KEY_USER].forEach((k) => sessionStorage.removeItem(k));
+    [KEY_TOKEN, KEY_EXPIRES, KEY_USER].forEach((k) => localStorage.removeItem(k));
   } catch {
     /* ignore */
   }
@@ -39,6 +41,9 @@ export function getToken() {
   }
   return token;
 }
+
+export const SESSION_HOURS = 12;
+export const TOKEN_STORAGE_KEY = KEY_TOKEN;
 
 export const isSignedIn = () => !!getToken();
 

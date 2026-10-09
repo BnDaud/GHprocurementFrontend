@@ -239,6 +239,11 @@ export default function Login({ onSuccess, notice = "" }) {
         >
           {busy ? <Spinner className="text-peach text-xl" /> : "Sign in"}
         </button>
+
+        <p className="-mt-2 text-center text-xs text-muted">
+          You stay signed in on this device for 12 hours. On a shared computer,
+          use Sign out when you finish.
+        </p>
       </form>
     </div>
   );

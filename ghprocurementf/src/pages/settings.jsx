@@ -3,6 +3,7 @@ import Metadata from "../component/metadata";
 import Contact from "../component/contact";
 import SecurityCard from "../component/securitycard";
 import TwoStepCard from "../component/twostepcard";
+import AdminsCard from "../component/adminscard";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
@@ -113,6 +114,8 @@ function Settings() {
       </div>
 
     </form>
+
+    <AdminsCard />
 
     <SecurityCard />
 

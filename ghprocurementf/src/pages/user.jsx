@@ -31,15 +31,12 @@ function User() {
     last_name: "",
     email: "",
     phone: "",
-    role: "",
     dp: null,
     password: "",
   });
 
   const updateuserdata = (arg, newdata) =>
     setUserdata((prev) => ({ ...prev, [arg]: newdata }));
-
-  const roles = ["Admin", "Viewer", "Editor"];
 
   const userFields = [
     <Field label="Username" htmlFor="user-username">
@@ -51,24 +48,6 @@ function User() {
         required
         onChange={(e) => updateuserdata("username", e.target.value)}
       />
-    </Field>,
-    <Field label="Role" htmlFor="user-role">
-      <select
-        id="user-role"
-        className={inputClass}
-        value={userdata.role}
-        required
-        onChange={(e) => updateuserdata("role", e.target.value)}
-      >
-        <option value="" disabled>
-          Select Role
-        </option>
-        {roles.map((role) => (
-          <option key={role} value={role}>
-            {role}
-          </option>
-        ))}
-      </select>
     </Field>,
     <Field label="First Name" htmlFor="user-first">
       <input
@@ -137,9 +116,9 @@ function User() {
     <SectionCard
       name={"Users"}
       singular="user"
-      subtitle="People who can sign in to this dashboard."
+      subtitle="Customer and contact accounts. Administrators are managed in Settings."
       button={"Add New User"}
-      thead={{ username: "", email: "", phone: "", role: "" }} //
+      thead={{ username: "", email: "", phone: "" }} //
       tbody={allusers}
       fields={userFields}
       payload={userdata}
