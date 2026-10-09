@@ -1,5 +1,17 @@
 import { Field, inputClass, textareaClass } from "./ui";
 
+// keep in step with MetaData.CURRENCIES in the API
+const CURRENCIES = [
+  ["USD", "US dollar ($)"],
+  ["NGN", "Nigerian naira (₦)"],
+  ["GBP", "British pound (£)"],
+  ["EUR", "Euro (€)"],
+  ["CNY", "Chinese yuan (¥)"],
+  ["GHS", "Ghanaian cedi (GH₵)"],
+  ["ZAR", "South African rand (R)"],
+  ["AED", "UAE dirham (AED)"],
+];
+
 // Homepage content: intro text and the headline numbers shown on the public site
 function Metadata({ meta, updateMeta }) {
   return (
@@ -45,7 +57,7 @@ function Metadata({ meta, updateMeta }) {
             onChange={(e) => updateMeta("suppliers", e.target.value)}
           />
         </Field>
-        <Field label="Years of experience" htmlFor="meta-experience">
+        <Field label="Yrs of Exp" htmlFor="meta-experience">
           <input
             id="meta-experience"
             type="number"
@@ -57,6 +69,27 @@ function Metadata({ meta, updateMeta }) {
           />
         </Field>
       </div>
+      <p className="-mt-2 text-xs text-muted">
+        Yrs of Exp goes up by one on 1 January by itself. Type a new number any time to reset it.
+      </p>
+      <Field
+        label="Price currency"
+        htmlFor="meta-currency"
+        hint="Product prices on the public website are shown in this currency. Change it here if you price in something else."
+      >
+        <select
+          id="meta-currency"
+          className={inputClass}
+          value={meta.currency ?? "USD"}
+          onChange={(e) => updateMeta("currency", e.target.value)}
+        >
+          {CURRENCIES.map(([code, label]) => (
+            <option key={code} value={code}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
     </div>
   );
 }
