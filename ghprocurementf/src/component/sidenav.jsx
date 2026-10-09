@@ -7,6 +7,7 @@ import {
   LuCircleHelp,
   LuUsers,
   LuMail,
+  LuHistory,
   LuSettings,
   LuLogOut,
 } from "react-icons/lu";
@@ -36,6 +37,7 @@ export const navGroups = [
     items: [
       { to: "/users", name: "Users", icon: <LuUsers className={iconClass} /> },
       { to: "/mail", name: "Mail", icon: <LuMail className={iconClass} /> },
+      { to: "/sent", name: "Sent mail", icon: <LuHistory className={iconClass} /> },
     ],
   },
   {

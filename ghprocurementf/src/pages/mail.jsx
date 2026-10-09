@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { LuPaperclip, LuSend, LuX, LuCircleCheck } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
@@ -173,7 +174,12 @@ function Mail() {
           className="flex items-center gap-2 rounded-xl border border-[#bfe0cb] bg-[#e6f2ea] px-4 py-3 text-sm font-semibold text-[#12633a]"
         >
           <LuCircleCheck className="text-lg" />
-          Email sent.{sentReference ? ` Reference ${sentReference}.` : ""}
+          <span>
+            Email sent.{sentReference ? ` Reference ${sentReference}.` : ""}{" "}
+            <Link to="/sent" className="underline underline-offset-2 hover:no-underline">
+              View sent mail
+            </Link>
+          </span>
         </div>
       )}
       {err && (

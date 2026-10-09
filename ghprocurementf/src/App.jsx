@@ -10,6 +10,7 @@ import User from "./pages/user";
 import Services from "./pages/services";
 import Faqs from "./pages/faq";
 import Mail from "./pages/mail";
+import SentMail from "./pages/sentmail";
 import Login from "./pages/login";
 import { isSignedIn, signOut as clearSession } from "./auth/auth";
 
@@ -138,6 +139,7 @@ function App() {
               <Route path="/users" element={<User />} />
               <Route path="/faqs" element={<Faqs />} />
               <Route path="/mail" element={<Mail />} />
+              <Route path="/sent" element={<SentMail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

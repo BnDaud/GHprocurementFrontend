@@ -13,6 +13,7 @@ const API = {
   faq: (arg = "") => `${BASEURL}/faqs${arg && "/" + arg}/?format=json`,
   services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
   emails: () => `${BASEURL}/emails/`,
+  sentEmails: (arg = "") => `${BASEURL}/sent-emails/${arg && arg + "/"}`,
 };
 
 export default API;

@@ -17,12 +17,18 @@ const chipStyles = {
   active: "bg-[#e6f2ea] text-[#12633a]",
   draft: "bg-[#fbf0d3] text-[#7a4b00]",
   inactive: "bg-[#fbf0d3] text-[#7a4b00]",
+  sent: "bg-[#e6f2ea] text-[#12633a]",
+  queued: "bg-[#fbf0d3] text-[#7a4b00]",
+  failed: "bg-[#fdeceb] text-[#8a1f15]",
 };
 const dotStyles = {
   published: "bg-[#12633a]",
   active: "bg-[#12633a]",
   draft: "bg-[#b77a00]",
   inactive: "bg-[#b77a00]",
+  sent: "bg-[#12633a]",
+  queued: "bg-[#b77a00]",
+  failed: "bg-[#b42318]",
 };
 
 export const StatusChip = ({ value }) => {
@@ -33,7 +39,7 @@ export const StatusChip = ({ value }) => {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${style}`}
     >
       <span className={`size-1.5 rounded-full ${dotStyles[key] ?? "bg-muted"}`} />
-      {value}
+      <span className="capitalize">{value}</span>
     </span>
   );
 };
