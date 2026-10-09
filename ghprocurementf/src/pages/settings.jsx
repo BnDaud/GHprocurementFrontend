@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import Metadata from "../component/metadata";
 import Contact from "../component/contact";
 import SecurityCard from "../component/securitycard";
+import TwoStepCard from "../component/twostepcard";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
@@ -114,6 +115,8 @@ function Settings() {
     </form>
 
     <SecurityCard />
+
+    <TwoStepCard />
 
       <div className="sticky -bottom-4 md:-bottom-8 -mx-4 md:-mx-10 -mb-4 md:-mb-8 px-4 md:px-10 py-3.5 bg-white border-t border-line flex flex-wrap items-center justify-between gap-3">
         <div
