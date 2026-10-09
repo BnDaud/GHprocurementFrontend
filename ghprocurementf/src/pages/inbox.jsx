@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   LuSearch,
@@ -200,7 +200,7 @@ function Message({ id, onClose, onRead }) {
 }
 
 export default function Inbox() {
-  const { refreshInbox } = useContext(globalContext);
+  const { refreshInbox, inboxUnread, inboxTotal } = useContext(globalContext);
   const { data, loading, err, doFetch } = useFetch();
   const markAll = useFetch();
   const [messages, setMessages] = useState([]);
@@ -214,6 +214,15 @@ export default function Inbox() {
     const timer = setInterval(load, 60000); // new mail shows up without reloading
     return () => clearInterval(timer);
   }, []);
+  // new mail arrived (or was read elsewhere): the sidebar counts changed, so reload the list
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    load();
+  }, [inboxTotal, inboxUnread]);
   useEffect(() => {
     if (data) {
       setMessages(data);
@@ -270,6 +279,23 @@ export default function Inbox() {
       </PageHeader>
 
       {err && !data && <ErrorBanner onRetry={load}>The inbox could not be loaded.</ErrorBanner>}
+
+      <section aria-label="Inbox totals" className="grid grid-cols-3 gap-3">
+        {[
+          ["Total", counts.all, "text-ink", "total"],
+          ["Unread", counts.unread, counts.unread > 0 ? "text-[#d92d20]" : "text-ink", "unread"],
+          ["Spam", counts.spam, "text-ink", "spam"],
+        ].map(([label, n, color, key]) => (
+          <div
+            key={key}
+            data-testid={`count-${key}`}
+            className="rounded-2xl border border-line bg-white px-4 py-3 md:px-5"
+          >
+            <div className={`text-2xl md:text-3xl font-extrabold leading-none tabular-nums ${color}`}>{n}</div>
+            <div className="mt-1 text-xs md:text-sm text-muted">{label}</div>
+          </div>
+        ))}
+      </section>
 
       <section className="rounded-2xl border border-line bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-line">

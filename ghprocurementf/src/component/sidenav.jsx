@@ -80,7 +80,7 @@ const linkClass = ({ isActive }) =>
   }`;
 
 export const NavList = ({ onNavigate }) => {
-  const { inboxUnread } = useContext(globalContext);
+  const { inboxUnread, inboxTotal } = useContext(globalContext);
   return (
   <nav aria-label="Main" className="flex flex-col gap-0.5">
     {navGroups.map((group, i) => (
@@ -100,19 +100,29 @@ export const NavList = ({ onNavigate }) => {
           >
             {({ isActive }) => (
               <>
-                {item.icon}
+                <span className="relative shrink-0 flex">
+                  {item.icon}
+                  {item.badge === "inbox" && inboxUnread > 0 && (
+                    <span
+                      aria-label={`${inboxUnread} unread`}
+                      className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#d92d20] text-white text-[10px] font-extrabold leading-none flex items-center justify-center shadow-sm"
+                    >
+                      {inboxUnread > 99 ? "99+" : inboxUnread}
+                    </span>
+                  )}
+                </span>
                 <span className="flex-1">{item.name}</span>
-                {item.badge === "inbox" && inboxUnread > 0 && (
+                {item.badge === "inbox" && inboxTotal > 0 && (
                   <span
-                    aria-label={`${inboxUnread} unread`}
-                    className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center ${
-                      isActive ? "bg-peach text-purple" : "bg-purple text-peach"
+                    aria-label={`${inboxTotal} in total`}
+                    className={`min-w-6 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      isActive ? "bg-white/20 text-peach" : "bg-ink/[0.07] text-ink/70"
                     }`}
                   >
-                    {inboxUnread > 99 ? "99+" : inboxUnread}
+                    {inboxTotal > 999 ? "999+" : inboxTotal}
                   </span>
                 )}
-                {isActive && !(item.badge === "inbox" && inboxUnread > 0) && (
+                {isActive && !(item.badge === "inbox" && inboxTotal > 0) && (
                   <span className="size-1.5 rounded-full bg-peach" />
                 )}
               </>

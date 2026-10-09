@@ -8,6 +8,7 @@ import {
   LuPlus,
   LuMail,
   LuImage,
+  LuInbox,
 } from "react-icons/lu";
 
 import useFetch from "../hooks/usefetch";
@@ -57,7 +58,7 @@ const quickActions = [
 const barColors = ["bg-purple", "bg-peach", "bg-[#0b4f78]", "bg-[#e0a21b]", "bg-[#12633a]"];
 
 const DashBoard = () => {
-  const { total, setTotals, allcatalogs, setAllCatalogs } =
+  const { total, setTotals, allcatalogs, setAllCatalogs, inboxUnread, inboxTotal } =
     useContext(globalContext);
 
   const {
@@ -132,7 +133,7 @@ const DashBoard = () => {
 
       <section
         aria-label="Totals"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4"
       >
         {stats.map(({ key, label, to, icon: Icon, tile }) => (
           <Link
@@ -161,6 +162,30 @@ const DashBoard = () => {
             </div>
           </Link>
         ))}
+        <Link
+          to="/inbox"
+          className="group col-span-2 lg:col-span-1 flex flex-col gap-4 rounded-2xl border border-line bg-white p-4 md:p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="size-10 rounded-xl flex items-center justify-center bg-[#fdeceb] text-[#b42318]">
+              <LuInbox className="text-xl" />
+            </div>
+            <span className="text-[13px] font-bold text-purple group-hover:underline">View</span>
+          </div>
+          <div>
+            <div className="text-3xl md:text-[34px] font-extrabold leading-none tracking-tight" data-testid="stat-Inbox">
+              {inboxTotal}
+            </div>
+            <div className="mt-1.5 text-sm text-muted">
+              Inbox
+              {inboxUnread > 0 && (
+                <span className="ml-2 rounded-full bg-[#d92d20] px-2 py-0.5 text-[11px] font-bold text-white">
+                  {inboxUnread} unread
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
       </section>
 
       <div className="flex flex-wrap items-start gap-5">

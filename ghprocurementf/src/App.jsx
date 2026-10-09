@@ -35,6 +35,7 @@ function App() {
 
   const [authed, setAuthed] = useState(isSignedIn);
   const [inboxUnread, setInboxUnread] = useState(0);
+  const [inboxTotal, setInboxTotal] = useState(0);
   const [expired, setExpired] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const mainRef = useRef(null);
@@ -55,7 +56,11 @@ function App() {
     try {
       const res = await fetch(API.inboxSummary(), { headers: authHeaders() });
       if (res.status === 401) return notifyUnauthorized();
-      if (res.ok) setInboxUnread((await res.json()).unread ?? 0);
+      if (res.ok) {
+        const j = await res.json();
+        setInboxUnread(j.unread ?? 0);
+        setInboxTotal(j.total ?? 0);
+      }
     } catch {
       /* offline: keep the last number */
     }
@@ -126,6 +131,7 @@ function App() {
         allservices,
         signOut,
         inboxUnread,
+        inboxTotal,
         refreshInbox,
       }}
     >
