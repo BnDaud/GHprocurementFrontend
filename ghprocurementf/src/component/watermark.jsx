@@ -13,7 +13,7 @@ export default function Watermark({ className = "" }) {
         alt=""
         draggable="false"
         data-testid="watermark"
-        className="w-[min(72%,640px)] h-auto opacity-[0.055]"
+        className="w-[min(72%,640px)] h-auto opacity-[0.028] -rotate-[22deg]"
       />
     </div>
   );
