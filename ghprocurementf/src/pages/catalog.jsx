@@ -89,7 +89,7 @@ const Catalog = () => {
       </select>
     </Field>,
 
-    <Field label="Price" htmlFor="cat-price">
+    <Field label="Price" htmlFor="cat-price" hint="Shown on the website in the currency chosen in Settings.">
       <input
         id="cat-price"
         type="number"
