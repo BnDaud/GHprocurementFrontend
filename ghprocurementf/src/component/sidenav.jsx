@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LuLayoutDashboard,
@@ -15,6 +15,8 @@ import {
 } from "react-icons/lu";
 import { globalContext } from "../App";
 import { currentUser } from "../auth/auth";
+import useFetch from "../hooks/usefetch";
+import API from "../endpoints/endpoints";
 import Logo from "./../images/Logo.png";
 
 const iconClass = "text-[17px] shrink-0";
@@ -83,7 +85,12 @@ const linkClass = ({ isActive }) =>
 
 export const NavList = ({ onNavigate }) => {
   const { inboxUnread, inboxTotal } = useContext(globalContext);
-  const isSuper = !!currentUser()?.is_super_admin;
+  // ask the server who is signed in (the copy saved in the browser can be out of date)
+  const me = useFetch();
+  useEffect(() => {
+    me.doFetch({ url: API.me(), method: "GET" });
+  }, []);
+  const isSuper = me.data ? !!me.data.is_super_admin : !!currentUser()?.is_super_admin;
   return (
   <nav aria-label="Main" className="flex flex-col gap-0.5">
     {navGroups.map((group, i) => (
