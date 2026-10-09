@@ -55,6 +55,8 @@ const firstLine = (text = "") => {
 function OrdersList() {
   const { data, loading, err, doFetch } = useFetch();
   const [tab, setTab] = useState("all");
+  const [stage, setStage] = useState("all");
+  const [sort, setSort] = useState("newest");
   const [query, setQuery] = useState("");
   const load = () => doFetch({ url: API.rfqs(), method: "GET" });
   useEffect(() => {
@@ -63,13 +65,21 @@ function OrdersList() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (data || []).filter((r) => {
+    const list = (data || []).filter((r) => {
       if (tab === "open" && r.status === "delivered") return false;
       if (tab === "done" && r.status !== "delivered") return false;
+      if (stage !== "all" && r.status !== stage) return false;
       if (!q) return true;
       return [r.reference, r.name, r.company, r.email, r.item].filter(Boolean).some((v) => v.toLowerCase().includes(q));
     });
-  }, [data, tab, query]);
+    const by = {
+      newest: (a, b) => new Date(b.created_at) - new Date(a.created_at),
+      oldest: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+      stage: (a, b) => stepOf(a.status) - stepOf(b.status) || new Date(b.created_at) - new Date(a.created_at),
+      customer: (a, b) => (a.company || "").localeCompare(b.company || "") || new Date(b.created_at) - new Date(a.created_at),
+    }[sort];
+    return list.sort(by);
+  }, [data, tab, stage, sort, query]);
 
   const count = (fn) => (data || []).filter(fn).length;
 
@@ -105,17 +115,37 @@ function OrdersList() {
               </button>
             ))}
           </div>
-          <label className="relative block">
-            <span className="sr-only">Search orders</span>
-            <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search reference, customer or item"
-              className="w-full sm:w-80 h-11 pl-10 pr-3.5 rounded-xl border border-[#d5d0dd] bg-white text-sm focus:outline-none focus:border-purple focus:ring-2 focus:ring-purple/20"
-            />
-          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <label>
+              <span className="sr-only">Filter by stage</span>
+              <select value={stage} onChange={(e) => setStage(e.target.value)} className="h-11 rounded-xl border border-[#d5d0dd] bg-white px-3 text-sm font-semibold focus:outline-none focus:border-purple focus:ring-2 focus:ring-purple/20">
+                <option value="all">All stages ({(data || []).length})</option>
+                {STAGES.map(([k, l], i) => (
+                  <option key={k} value={k}>{i + 1} · {l} ({count((r) => r.status === k)})</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">Sort orders</span>
+              <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-11 rounded-xl border border-[#d5d0dd] bg-white px-3 text-sm font-semibold focus:outline-none focus:border-purple focus:ring-2 focus:ring-purple/20">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="stage">By stage</option>
+                <option value="customer">By company</option>
+              </select>
+            </label>
+            <label className="relative block">
+              <span className="sr-only">Search orders</span>
+              <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search reference, customer or item"
+                className="w-full sm:w-72 h-11 pl-10 pr-3.5 rounded-xl border border-[#d5d0dd] bg-white text-sm focus:outline-none focus:border-purple focus:ring-2 focus:ring-purple/20"
+              />
+            </label>
+          </div>
         </div>
 
         {loading && !data ? (
@@ -125,7 +155,7 @@ function OrdersList() {
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-6 py-16 text-center text-muted">
             <LuTruck className="text-3xl" />
-            <p className="text-sm">{(data || []).length === 0 ? "No quote requests yet." : "No orders match."}</p>
+            <p className="text-sm">{(data || []).length === 0 ? "No quote requests yet." : "No orders match these filters."}</p>
           </div>
         ) : (
           <ul aria-label="Orders" className="divide-y divide-line">
@@ -172,6 +202,7 @@ function OrderDetail({ id }) {
   const edit = useFetch();
   const del = useFetch();
   const addr = useFetch();
+  const me = useFetch();
 
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState(null);
@@ -179,6 +210,11 @@ function OrderDetail({ id }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [address, setAddress] = useState("");
   const [savedAddress, setSavedAddress] = useState(false);
+
+  const portal = me.data ? me.data.customer_portal !== false : true; // false until the customer site is live
+  useEffect(() => {
+    me.doFetch({ url: API.me(), method: "GET" });
+  }, []);
 
   const reload = () => {
     rfq.doFetch({ url: API.rfqs(id), method: "GET" });
@@ -255,7 +291,7 @@ function OrderDetail({ id }) {
       post.doFetch({
         url: API.rfqUpdates(id),
         method: "POST",
-        body: { ...body, estimated_delivery: form.estimated_delivery || null, notify: form.notify },
+        body: { ...body, estimated_delivery: form.estimated_delivery || null, notify: portal && form.notify },
       });
     }
   };
@@ -340,10 +376,11 @@ function OrderDetail({ id }) {
               )}
             </div>
             {!editingId && (
-              <label className="flex items-start gap-3 text-sm">
-                <input type="checkbox" checked={form.notify} onChange={set("notify")} className="mt-0.5 size-5 accent-purple" />
+              <label className={`flex items-start gap-3 text-sm ${portal ? "" : "opacity-70"}`}>
+                <input type="checkbox" checked={portal && form.notify} disabled={!portal} onChange={set("notify")} className="mt-0.5 size-5 accent-purple" />
                 <span>
                   Email {r.name?.split(" ")[0] || "the customer"} about this update <span className="text-muted">({r.email})</span>
+                  {!portal && <span className="mt-1 block text-xs text-muted">Customer emails start when the new customer site goes live. Updates are saved now.</span>}
                 </span>
               </label>
             )}
@@ -361,7 +398,7 @@ function OrderDetail({ id }) {
                   {error}
                 </p>
               )}
-              {!error && post.success && <p role="status" className="text-sm font-semibold text-[#12633a]">Update posted.</p>}
+              {!error && post.success && <p role="status" className="text-sm font-semibold text-[#12633a]">Update posted{post.data?.emailed ? ", and the customer was emailed." : "."}</p>}
             </div>
           </form>
         </section>
@@ -416,6 +453,7 @@ function OrderDetail({ id }) {
                       <p className="text-[15px] font-extrabold break-words">{u.headline}</p>
                       {u.details && <p className="mt-0.5 text-[13.5px] text-ink/80 whitespace-pre-wrap break-words">{u.details}</p>}
                       {u.location && <p className="mt-0.5 text-xs text-muted">Where: {u.location}</p>}
+                      {u.posted_by && <p className="mt-0.5 text-xs text-muted">Posted by {u.posted_by}</p>}
                       <div className="mt-2 flex gap-2">
                         <button type="button" onClick={() => startEdit(u)} aria-label={`Edit ${u.headline}`} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#d5d0dd] text-[13px] font-bold hover:bg-bgcolor">
                           <LuPencil /> Edit

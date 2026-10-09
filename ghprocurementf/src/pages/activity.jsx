@@ -9,6 +9,7 @@ const GROUPS = [
   ["signins", "Sign-ins & security", "sign_in,sign_in_failed,password_changed,two_step_on,two_step_off,recovery_codes"],
   ["changes", "Changes", "created,updated,deleted"],
   ["mail", "Emails & quotes", "email_sent,quote_received"],
+  ["orders", "Orders", "", "order update"],
 ];
 
 const DOT = {
@@ -73,8 +74,9 @@ export default function Activity() {
   const load = (reset = true) => {
     if (reset) offset.current = 0;
     const p = new URLSearchParams();
-    const actions = GROUPS.find((g) => g[0] === group)[2];
+    const [, , actions, target] = GROUPS.find((g) => g[0] === group);
     if (actions) p.set("action", actions);
+    if (target) p.set("target", target);
     if (query.trim()) p.set("q", query.trim());
     if (offset.current) p.set("offset", String(offset.current));
     doFetch({ url: API.audit(`?${p}`), method: "GET" });
