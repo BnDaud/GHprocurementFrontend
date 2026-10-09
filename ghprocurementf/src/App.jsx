@@ -141,7 +141,7 @@ function App() {
 
           <main
             ref={mainRef}
-            className="flex-1 overflow-y-auto px-4 py-4 md:px-10 md:py-8 space-y-5"
+            className="relative flex-1 overflow-y-auto px-4 py-4 md:px-10 md:py-8 space-y-5"
           >
             <Routes>
               <Route path="/" element={<DashBoard />} />
