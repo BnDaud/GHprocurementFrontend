@@ -11,6 +11,7 @@ import {
   LuInbox,
   LuSettings,
   LuActivity,
+  LuTruck,
   LuLogOut,
 } from "react-icons/lu";
 import { globalContext } from "../App";
@@ -40,6 +41,7 @@ export const navGroups = [
     label: "People",
     items: [
       { to: "/users", name: "Users", icon: <LuUsers className={iconClass} /> },
+      { to: "/orders", name: "Orders", icon: <LuTruck className={iconClass} /> },
       { to: "/inbox", name: "Inbox", icon: <LuInbox className={iconClass} />, badge: "inbox" },
       { to: "/mail", name: "Mail", icon: <LuMail className={iconClass} /> },
       { to: "/sent", name: "Sent mail", icon: <LuHistory className={iconClass} /> },
