@@ -28,7 +28,7 @@ function Modal({
     setSubmit(!submit);
   };
 
-  const { data, loading, err, success, doFetch } = useFetch();
+  const { data, loading, err, errDetail, success, doFetch } = useFetch();
 
   // Escape closes the dialog
   useEffect(() => {
@@ -181,7 +181,11 @@ function Modal({
               role="alert"
               className="mt-4 rounded-lg bg-[#fdeceb] px-3 py-2 text-sm text-[#8a1f15]"
             >
-              Could not save. Check the details and try again.
+              {typeof errDetail?.detail === "string"
+                ? errDetail.detail
+                : method === "DELETE"
+                ? "Could not delete this item."
+                : "Could not save. Check the details and try again."}
             </p>
           )}
         </div>
