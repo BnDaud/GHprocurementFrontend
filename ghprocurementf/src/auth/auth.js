@@ -1,6 +1,6 @@
 // Sign-in for the CMS. The API issues a signed token on login; every request
 // then carries it as `Authorization: Bearer <token>` and the API enforces it.
-// The token is kept in localStorage for the 12 hours the server allows, so it
+// The token is kept in localStorage for as long as the server allows (3 hours), so it
 // survives closing the tab or the browser and is shared between tabs. Signing
 // out (in any tab) clears it everywhere.
 
@@ -42,7 +42,6 @@ export function getToken() {
   return token;
 }
 
-export const SESSION_HOURS = 12;
 export const TOKEN_STORAGE_KEY = KEY_TOKEN;
 
 export const isSignedIn = () => !!getToken();
