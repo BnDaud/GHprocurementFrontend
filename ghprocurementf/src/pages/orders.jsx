@@ -192,7 +192,7 @@ function OrdersList() {
 }
 
 // ---------------------------------------------------------------- detail
-const blank = { stage: "received", headline: "", details: "", location: "", estimated_delivery: "", notify: true };
+const blank = { stage: "received", headline: "", details: "", location: "", estimated_delivery: "" };
 
 function OrderDetail({ id }) {
   const navigate = useNavigate();
@@ -202,7 +202,6 @@ function OrderDetail({ id }) {
   const edit = useFetch();
   const del = useFetch();
   const addr = useFetch();
-  const me = useFetch();
 
   const [form, setForm] = useState(blank);
   const [editingId, setEditingId] = useState(null);
@@ -210,11 +209,6 @@ function OrderDetail({ id }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [address, setAddress] = useState("");
   const [savedAddress, setSavedAddress] = useState(false);
-
-  const portal = me.data ? me.data.customer_portal !== false : true; // false until the customer site is live
-  useEffect(() => {
-    me.doFetch({ url: API.me(), method: "GET" });
-  }, []);
 
   const reload = () => {
     rfq.doFetch({ url: API.rfqs(id), method: "GET" });
@@ -291,14 +285,14 @@ function OrderDetail({ id }) {
       post.doFetch({
         url: API.rfqUpdates(id),
         method: "POST",
-        body: { ...body, estimated_delivery: form.estimated_delivery || null, notify: portal && form.notify },
+        body: { ...body, estimated_delivery: form.estimated_delivery || null },
       });
     }
   };
 
   const startEdit = (u) => {
     setEditingId(u.id);
-    setForm({ stage: u.stage, headline: u.headline, details: u.details || "", location: u.location || "", estimated_delivery: r?.estimated_delivery || "", notify: false });
+    setForm({ stage: u.stage, headline: u.headline, details: u.details || "", location: u.location || "", estimated_delivery: r?.estimated_delivery || "" });
     setError("");
     document.getElementById("post-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -375,15 +369,7 @@ function OrderDetail({ id }) {
                 </Field>
               )}
             </div>
-            {!editingId && (
-              <label className={`flex items-start gap-3 text-sm ${portal ? "" : "opacity-70"}`}>
-                <input type="checkbox" checked={portal && form.notify} disabled={!portal} onChange={set("notify")} className="mt-0.5 size-5 accent-purple" />
-                <span>
-                  Email {r.name?.split(" ")[0] || "the customer"} about this update <span className="text-muted">({r.email})</span>
-                  {!portal && <span className="mt-1 block text-xs text-muted">Customer emails start when the new customer site goes live. Updates are saved now.</span>}
-                </span>
-              </label>
-            )}
+            {!editingId && <p className="text-[13px] text-muted">{r.name?.split(" ")[0] || "The customer"} is emailed about this update automatically ({r.email}).</p>}
             <div className="flex flex-wrap items-center gap-3">
               <button type="submit" disabled={busy} className={btnPrimary}>
                 {busy ? <Spinner className="text-peach text-xl" /> : editingId ? "Save changes" : "Post update"}
