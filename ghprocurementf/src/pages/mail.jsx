@@ -402,7 +402,7 @@ function Mail() {
                 />
               </Field>
               <p className="md:col-span-2 text-xs text-muted">
-                The reference number (for example GHP-2026-0007) and today&apos;s
+                The reference number (for example GHP-2026-K7M2Q9) and today&apos;s
                 date are added automatically when you send, and the reference is
                 saved.
               </p>
@@ -424,7 +424,7 @@ function Mail() {
             <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-4" aria-describedby="price-hint">
               <legend className="px-1 text-sm font-bold">Price table (optional)</legend>
               <p id="price-hint" className="-mt-1 text-xs text-muted">
-                List what you are quoting. The line totals and the grand total are added up for you and shown in the email.
+                List each item with its price, for example Milo, 4999. Quantity starts at 1. The line totals and the grand total are added up for you and shown in the email.
               </p>
               {rows.length > 0 && (
                 <div className="flex flex-col gap-2.5">
@@ -445,7 +445,7 @@ function Mail() {
               {errorText("items")}
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" onClick={() => setEmail((prev) => ({ ...prev, items: [...prev.items, blankRow()] }))} className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-[#d5d0dd] text-sm font-bold hover:bg-bgcolor">
-                  <LuPlus /> Add a row
+                  <LuPlus /> {rows.length ? "Add another item" : "Add an item (name and price)"}
                 </button>
                 {rows.length > 0 && (
                   <label className="flex items-center gap-2 text-sm font-bold">
