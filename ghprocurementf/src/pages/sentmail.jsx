@@ -7,6 +7,8 @@ import API from "../endpoints/endpoints";
 import { authHeaders } from "../auth/auth";
 import watermark from "../images/watermark.png";
 import logoWhite from "../images/logo-white.png";
+import logoDark from "../images/logo-dark.png";
+import { elementToPdf, emailHtmlToPdf } from "../lib/pdf";
 import {
   PageHeader,
   StatusChip,
@@ -43,6 +45,48 @@ const Row = ({ label, children }) => (
     <dd className="min-w-0 break-words font-semibold">{children}</dd>
   </div>
 );
+
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// The details page as plain HTML with inline styles, so the PDF looks the same wherever it is made.
+function detailsMarkup(d, logo, kinds, fmtDate, fmtSize) {
+  const row = (k, v) => (v ? `<tr><td style="padding:9px 0;color:#6b6277;width:140px;vertical-align:top">${k}</td><td style="padding:9px 0;font-weight:700;word-break:break-word">${v}</td></tr>` : "");
+  const q = d.quote?.rows?.length ? d.quote : null;
+  const table = q
+    ? `<h3 style="margin:26px 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6b6277">Price table (${esc(q.currency)})</h3>
+       <table style="width:100%;border-collapse:collapse;border:1px solid #e6e0ec;font-size:13px">
+         <tr style="background:#f6f2f9;color:#6b6277;font-size:11px;text-transform:uppercase;letter-spacing:.06em"><td style="padding:8px 10px">Item</td><td style="padding:8px 10px;text-align:right">Qty</td><td style="padding:8px 10px;text-align:right">Unit price</td><td style="padding:8px 10px;text-align:right">Total</td></tr>
+         ${q.rows.map((r) => `<tr style="border-top:1px solid #e6e0ec"><td style="padding:9px 10px;word-break:break-word">${r.has_image ? '<div style="font-size:11px;color:#6b6277;margin-bottom:3px">[ picture sent ]</div>' : ""}${esc(r.description)}</td><td style="padding:9px 10px;text-align:right">${esc(r.quantity)}</td><td style="padding:9px 10px;text-align:right">${esc(r.unit_price_text)}</td><td style="padding:9px 10px;text-align:right;font-weight:700">${esc(r.line_total_text)}</td></tr>`).join("")}
+         <tr style="border-top:1px solid #e6e0ec"><td colspan="3" style="padding:7px 10px;text-align:right;color:#6b6277">Subtotal</td><td style="padding:7px 10px;text-align:right">${esc(q.subtotal_text)}</td></tr>
+         ${q.shipping_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">Delivery</td><td style="padding:5px 10px;text-align:right">${esc(q.shipping_text)}</td></tr>` : ""}
+         ${q.vat_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">VAT (${esc(q.vat_percent)}%)</td><td style="padding:5px 10px;text-align:right">${esc(q.vat_text)}</td></tr>` : ""}
+         <tr style="border-top:1px solid #e6e0ec;color:#420e51;font-weight:800"><td colspan="3" style="padding:10px;text-align:right">Total</td><td style="padding:10px;text-align:right">${esc(q.total_text)}</td></tr>
+       </table>`
+    : "";
+  const files = d.attachments?.length
+    ? `<h3 style="margin:26px 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6b6277">Attachments (${d.attachments.length})</h3>${d.attachments.map((a) => `<div style="padding:7px 0;border-top:1px solid #eee9f1;font-size:13px">${esc(a.name)} <span style="color:#6b6277">${esc(fmtSize(a.size))}</span></div>`).join("")}`
+    : "";
+  return `<div style="font-family:Manrope,Arial,Helvetica,sans-serif;color:#1d1527;padding:40px 44px 44px;font-size:14px;line-height:1.5">
+    <table style="width:100%;border-collapse:collapse"><tr>
+      <td style="vertical-align:top"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6b6277;font-weight:700">Sent email</div>
+        <div style="margin-top:4px;font-size:22px;font-weight:800;color:#420e51;word-break:break-word">${esc(d.subject)}</div>
+        ${d.reference ? `<div style="margin-top:2px;font-weight:700;color:#6b6277">${esc(d.reference)}</div>` : ""}</td>
+      <td style="vertical-align:top;text-align:right;width:190px"><img src="${logo}" alt="GH Procurement" style="height:46px;width:auto"></td>
+    </tr></table>
+    <div style="height:2px;background:#febcbd;margin:20px 0 8px"></div>
+    <table style="width:100%;border-collapse:collapse">
+      ${row("Status", esc(d.status))}${row("Type", esc(kinds[d.kind] ?? d.kind))}
+      ${row("To", esc((d.recipient_name ? `${d.recipient_name} · ` : "") + d.recipient))}
+      ${row("Sent", esc(fmtDate(d.sent_at || d.created_at)))}
+      ${row("Valid for", d.valid_days ? `${esc(d.valid_days)} days` : "")}
+      ${row("Heading", esc(d.title))}${row("Order", esc(d.order_reference))}${row("Quoted total", esc(d.total))}
+    </table>
+    <h3 style="margin:26px 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6b6277">Message</h3>
+    <div style="background:#f6f2f9;border:1px solid #e6e0ec;border-radius:12px;padding:14px 16px;white-space:pre-wrap;word-break:break-word">${esc(d.body)}</div>
+    ${table}${files}
+    <div style="margin-top:34px;font-size:11px;color:#8a8196;text-align:center">GH Procurement · Sent mail record</div>
+  </div>`;
+}
 
 function Detail({ id, onClose, onChanged }) {
   const { data, loading, err, doFetch } = useFetch();
@@ -91,82 +135,29 @@ function Detail({ id, onClose, onChanged }) {
     };
   }, [view, html, htmlUrl]);
 
-  // The email as a PDF, drawn from the very same HTML you see, so it looks identical.
-  // (The two libraries load only when you press Download.)
+  // Download saves the page you are looking at: the details page, or the email as it was sent.
   const download = async () => {
     setSaving(true);
-    let frame;
     try {
-      const markup = html ?? (await fetch(htmlUrl, { headers: authHeaders() }).then((r) => (r.ok ? r.text() : Promise.reject(new Error("failed")))));
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
-
-      frame = document.createElement("iframe");
-      frame.setAttribute("sandbox", "allow-same-origin"); // no scripts can run in it
-      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:700px;height:1000px;border:0;visibility:hidden";
-      document.body.appendChild(frame);
-      await new Promise((resolve) => {
-        frame.onload = resolve;
-        frame.srcdoc = markup;
-      });
-      const doc = frame.contentDocument;
-      await Promise.all(
-        [...doc.images].map((img) => (img.complete ? null : new Promise((res) => { img.onload = res; img.onerror = res; })))
-      );
-      const target = doc.documentElement;
-      const canvas = await html2canvas(doc.body, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: getComputedStyle(doc.body).backgroundColor || "#ffffff",
-        windowWidth: 700,
-        width: 700,
-        height: Math.max(target.scrollHeight, doc.body.scrollHeight),
-      });
-
-      // the company logo, faint and slanted, on every page (white, because the email is dark)
-      const mark = await new Promise((res) => {
-        const im = new Image();
-        im.onload = () => res(im);
-        im.onerror = () => res(null);
-        im.src = logoWhite;
-      });
-      // one page as long as the email (nothing is cut in half); only a very long one is split into A4 pages
-      const A4W = 595.28;
-      const fit = A4W / canvas.width; // canvas px -> pdf pt
-      const whole = canvas.height * fit <= 14000;
-      const pdf = new jsPDF({ unit: "pt", format: whole ? [A4W, canvas.height * fit] : "a4", compress: true });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const sliceH = whole ? canvas.height : Math.floor(pageH / fit); // canvas px per page
-      const bg = getComputedStyle(doc.body).backgroundColor || "#ffffff";
-      const rgb = (bg.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number);
-      for (let y = 0, page = 0; y < canvas.height; y += sliceH, page += 1) {
-        const part = document.createElement("canvas");
-        part.width = canvas.width;
-        part.height = Math.min(sliceH, canvas.height - y);
-        const ctx = part.getContext("2d");
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, part.width, part.height);
-        ctx.drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
-        if (mark) {
-          const w = part.width * 0.62;
-          const h = (w * mark.height) / mark.width;
-          ctx.save();
-          ctx.globalAlpha = 0.07;
-          ctx.translate(part.width / 2, sliceH / 2);
-          ctx.rotate((-22 * Math.PI) / 180);
-          ctx.drawImage(mark, -w / 2, -h / 2, w, h);
-          ctx.restore();
+      const name = data?.reference || "email";
+      if (view === "email" && !isDraft) {
+        const markup = html ?? (await fetch(htmlUrl, { headers: authHeaders() }).then((r) => (r.ok ? r.text() : Promise.reject(new Error("failed")))));
+        await emailHtmlToPdf(markup, { filename: `${name}.pdf`, mark: logoWhite });
+      } else {
+        const box = document.createElement("div");
+        box.style.cssText = "position:fixed;left:-10000px;top:0;width:760px;background:#fff";
+        box.innerHTML = detailsMarkup(data, logoDark, KINDS, fmtDate, fmtSize);
+        document.body.appendChild(box);
+        try {
+          await Promise.all([...box.querySelectorAll("img")].map((img) => (img.complete ? null : new Promise((res) => { img.onload = res; img.onerror = res; }))));
+          await elementToPdf(box, { filename: `${name}-details.pdf`, mark: logoDark, markAlpha: 0.06, width: 760 });
+        } finally {
+          box.remove();
         }
-        if (page > 0) pdf.addPage();
-        pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
-        pdf.rect(0, 0, pageW, pageH, "F"); // a short last page keeps the same background
-        pdf.addImage(part.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pageW, part.height * fit);
       }
-      pdf.save(`${data?.reference || "email"}.pdf`);
     } catch {
       setHtmlErr(true);
     } finally {
-      frame?.remove();
       setSaving(false);
     }
   };
@@ -198,6 +189,7 @@ function Detail({ id, onClose, onChanged }) {
               <p className="mt-0.5 text-sm font-bold text-muted">{data.reference}</p>
             )}
           </div>
+          <img src={logoDark} alt="GH Procurement" className="ml-auto hidden h-9 w-auto shrink-0 sm:block" />
           <button
             type="button"
             aria-label="Close"
