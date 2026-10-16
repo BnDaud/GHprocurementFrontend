@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX } from "react-icons/lu";
+import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX, LuFileText } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import {
@@ -330,6 +330,13 @@ function OrderDetail({ id }) {
           <LuArrowLeft /> All orders
         </button>
         <PageHeader title={firstLine(r.item)} subtitle={`${r.reference || "No reference"} · sent ${fmt(r.created_at)}`}>
+          <button
+            type="button"
+            onClick={() => navigate("/mail", { state: { quote: { id: r.id, reference: r.reference, recipient: r.email, recipient_name: r.name, item: r.item } } })}
+            className={btnPrimary}
+          >
+            <LuFileText className="text-lg" /> Send quotation
+          </button>
           <Chip status={r.status} />
         </PageHeader>
       </div>

@@ -108,6 +108,8 @@ function Detail({ id, onClose }) {
                   <Row label="Valid for">{data.valid_days} days</Row>
                 ) : null}
                 <Row label="Heading">{data.title}</Row>
+                {data.order_reference && <Row label="Order">{data.order_reference}</Row>}
+                {data.total && <Row label="Quoted total">{data.total}</Row>}
               </dl>
 
               {data.status === "failed" && data.error && (
@@ -125,6 +127,40 @@ function Detail({ id, onClose }) {
               <div className="rounded-xl border border-line bg-bgcolor/60 p-4 text-sm leading-relaxed whitespace-pre-wrap break-words">
                 {data.body}
               </div>
+
+              {data.quote?.rows?.length > 0 && (
+                <>
+                  <h3 className="mt-5 mb-2 text-xs font-bold uppercase tracking-wider text-muted">
+                    Price table ({data.quote.currency})
+                  </h3>
+                  <div className="overflow-x-auto rounded-xl border border-line">
+                    <table className="w-full min-w-[420px] text-sm" aria-label="Price table sent">
+                      <thead>
+                        <tr className="bg-bgcolor/60 text-left text-xs font-bold uppercase tracking-wider text-muted">
+                          <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2 text-right">Qty</th>
+                          <th className="px-3 py-2 text-right">Unit price</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.quote.rows.map((r, i) => (
+                          <tr key={i} className="border-t border-line">
+                            <td className="px-3 py-2 break-words">{r.description}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{r.quantity}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{r.unit_price_text}</td>
+                            <td className="px-3 py-2 text-right font-semibold tabular-nums">{r.line_total_text}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-line"><td colSpan={3} className="px-3 py-1.5 text-right text-muted">Subtotal</td><td className="px-3 py-1.5 text-right tabular-nums">{data.quote.subtotal_text}</td></tr>
+                        {data.quote.shipping_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">Delivery</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.shipping_text}</td></tr>}
+                        {data.quote.vat_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">VAT ({data.quote.vat_percent}%)</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.vat_text}</td></tr>}
+                        <tr className="border-t border-line font-extrabold text-purple"><td colSpan={3} className="px-3 py-2 text-right">Total</td><td className="px-3 py-2 text-right tabular-nums">{data.quote.total_text}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
 
               <h3 className="mt-5 mb-2 text-xs font-bold uppercase tracking-wider text-muted">
                 Attachments ({data.attachments_count})
@@ -264,13 +300,14 @@ export default function SentMail() {
           </div>
         ) : (
           <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[820px] border-collapse text-sm">
+            <table className="w-full min-w-[920px] border-collapse text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold uppercase tracking-wider text-muted">
                   <th scope="col" className="px-4 pl-5 py-3.5">Reference</th>
                   <th scope="col" className="px-4 py-3.5">Date</th>
                   <th scope="col" className="px-4 py-3.5">To</th>
                   <th scope="col" className="px-4 py-3.5">Subject</th>
+                  <th scope="col" className="px-4 py-3.5 text-right">Total</th>
                   <th scope="col" className="px-4 py-3.5 text-right">Files</th>
                   <th scope="col" className="px-4 py-3.5">Status</th>
                   <th scope="col" className="px-5 py-3.5 text-right">
@@ -295,7 +332,9 @@ export default function SentMail() {
                     </td>
                     <td className="px-4 py-3.5 max-w-xs">
                       <div className="truncate" title={m.subject}>{m.subject}</div>
+                      {m.order_reference && <div className="truncate text-xs text-muted">Order {m.order_reference}</div>}
                     </td>
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap font-semibold tabular-nums">{m.total || <span className="font-normal text-muted">-</span>}</td>
                     <td className="px-4 py-3.5 text-right tabular-nums">{m.attachments_count}</td>
                     <td className="px-4 py-3.5"><StatusChip value={m.status} /></td>
                     <td className="px-5 py-2 text-right">

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LuPaperclip, LuSend, LuX, LuCircleCheck } from "react-icons/lu";
+import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2 } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import logoWhite from "../images/logo-white.png";
 import {
   PageHeader,
   Field,
@@ -59,6 +60,26 @@ function readableError(detail) {
   return parts.join(" ");
 }
 
+// the currencies the API accepts, and how each is written (the server adds the figures up and has the last word)
+const CURRENCIES = [
+  ["USD", "US dollar ($)", "$"],
+  ["NGN", "Nigerian naira (₦)", "₦"],
+  ["GBP", "British pound (£)", "£"],
+  ["EUR", "Euro (€)", "€"],
+  ["CNY", "Chinese yuan (¥)", "¥"],
+  ["GHS", "Ghanaian cedi (GH₵)", "GH₵"],
+  ["ZAR", "South African rand (R)", "R"],
+  ["AED", "UAE dirham (AED)", "AED "],
+];
+const symbolOf = (code) => CURRENCIES.find((c) => c[0] === code)?.[2] ?? `${code} `;
+const money = (n, code) =>
+  `${symbolOf(code)}${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const num = (v) => {
+  const n = Number(String(v ?? "").replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "" });
+
 function Mail() {
   const initalState = {
     subject: "",
@@ -69,11 +90,31 @@ function Mail() {
     kind: "outreach", // "outreach" | "rfq_reply"
     recipient_name: "",
     valid_days: "",
+    items: [], // the price table of a quotation
+    currency: "",
+    shipping: "",
+    vat_percent: "",
+    rfq: "", // the order this quotation is for
   };
-  // "Reply" in the Inbox opens this page with the sender and subject filled in
-  const reply = useLocation().state?.reply;
+  // "Reply" in the Inbox opens this page with the sender and subject filled in;
+  // "Send quotation" on an order opens it with the quotation for that order started
+  const location = useLocation();
+  const reply = location.state?.reply;
+  const order = location.state?.quote; // { id, reference, recipient, recipient_name, item }
   const [email, setEmail] = useState(() =>
-    reply
+    order
+      ? {
+          ...initalState,
+          kind: "rfq_reply",
+          recipient: String(order.recipient || ""),
+          recipient_name: String(order.recipient_name || ""),
+          subject: `Your quotation, ${order.reference}`,
+          title: "Your quotation",
+          body: `Hello ${String(order.recipient_name || "").split(" ")[0] || "there"},\n\nThank you for your request ${order.reference}. Please find our prices below.\n\nLet us know if you would like to go ahead.`,
+          items: [blankRow(String(order.item || "").split("\n")[0].slice(0, 200))],
+          rfq: String(order.id),
+        }
+      : reply
       ? {
           ...initalState,
           recipient: String(reply.recipient || ""),
@@ -82,9 +123,27 @@ function Mail() {
         }
       : initalState
   );
+  const meta = useFetch();
+  useEffect(() => {
+    meta.doFetch({ url: API.metadata(1), method: "GET" }); // the currency chosen in Settings is the default
+  }, []);
+  const currency = email.currency || meta.data?.currency || "USD";
+  const rows = email.items;
+  const filled = rows.filter((r) => r.description.trim() || r.unit_price !== "");
+  const lines = filled.map((r) => Math.round(num(r.quantity) * num(r.unit_price) * 100) / 100);
+  const subtotal = lines.reduce((a, b) => a + b, 0);
+  const ship = num(email.shipping);
+  const vat = Math.round((subtotal + ship) * num(email.vat_percent)) / 100;
+  const total = subtotal + ship + vat;
+  const setRow = (i, key, value) => {
+    setErrors((prev) => ({ ...prev, items: undefined }));
+    setSent(false);
+    setEmail((prev) => ({ ...prev, items: prev.items.map((r, k) => (k === i ? { ...r, [key]: value } : r)) }));
+  };
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(false);
   const [sentReference, setSentReference] = useState("");
+  const [sentOrder, setSentOrder] = useState("");
   const [submit, setSubmit] = useState(false);
   const { data, success, loading, err, errDetail, doFetch } = useFetch();
 
@@ -129,6 +188,11 @@ function Mail() {
     if (email.body.length === 0) next.body = "Write a message.";
     if (email.recipient.length === 0) next.recipient = "Enter the recipient's email.";
     if (email.subject.length === 0) next.subject = "Add a subject.";
+    if (isRfq) {
+      const bad = filled.findIndex((r) => !r.description.trim() || !(num(r.quantity) > 0) || r.unit_price === "" || num(r.unit_price) < 0);
+      if (bad >= 0) next.items = `Row ${bad + 1}: add a description, a quantity and a price.`;
+      else if ((ship || num(email.vat_percent)) && filled.length === 0) next.items = "Add at least one row to the price table, or clear delivery and VAT.";
+    }
     setErrors(next);
     if (Object.keys(next).length === 0) setSubmit(true);
   };
@@ -145,6 +209,13 @@ function Mail() {
       if (email.kind === "rfq_reply") {
         formData.append("recipient_name", email.recipient_name);
         formData.append("valid_days", email.valid_days); // blank = no validity line
+        if (filled.length) {
+          formData.append("items", JSON.stringify(filled.map((r) => ({ description: r.description.trim(), quantity: String(num(r.quantity)), unit_price: String(num(r.unit_price)) }))));
+          formData.append("currency", currency);
+          formData.append("shipping", email.shipping);
+          formData.append("vat_percent", email.vat_percent);
+        }
+        if (email.rfq) formData.append("rfq", email.rfq);
       }
 
       email.attachments.forEach((file) => {
@@ -160,6 +231,7 @@ function Mail() {
     if (success) {
       setSent(true);
       setSentReference(data?.reference || "");
+      setSentOrder(email.rfq ? String(email.rfq) : "");
       setEmail((prev) => ({ ...initalState, kind: prev.kind })); // keep the chosen template
     }
   }, [success]);
@@ -186,7 +258,15 @@ function Mail() {
         >
           <LuCircleCheck className="text-lg" />
           <span>
-            Email sent.{sentReference ? ` Reference ${sentReference}.` : ""}{" "}
+            Email sent.{sentReference ? ` Reference ${sentReference}.` : ""}
+            {sentOrder && " The order now shows as Quoted."}{" "}
+            {sentOrder && (
+              <>
+                <Link to={`/orders/${sentOrder}`} className="underline underline-offset-2 hover:no-underline">
+                  Open the order
+                </Link>{" · "}
+              </>
+            )}
             <Link to="/sent" className="underline underline-offset-2 hover:no-underline">
               View sent mail
             </Link>
@@ -206,6 +286,11 @@ function Mail() {
           onSubmit={handlesubmit}
           className="flex-[999_1_480px] min-w-0 flex flex-col gap-5 rounded-2xl border border-line bg-white p-5 md:p-6"
         >
+          {email.rfq && order && (
+            <p className="rounded-xl border border-peach bg-peach-50 px-4 py-3 text-sm font-semibold text-purple">
+              Quotation for order <b>{order.reference}</b>. Sending it moves that order to Quoted and records it in Activity.
+            </p>
+          )}
           <fieldset className="flex flex-col gap-2.5">
             <legend className="mb-2 text-sm font-bold">Email type</legend>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -218,7 +303,7 @@ function Mail() {
                 {
                   value: "rfq_reply",
                   name: "Reply to a quote request",
-                  hint: "Formal quotation with an automatic reference number and date.",
+                  hint: "Formal quotation with a reference number, date and an optional price table.",
                 },
               ].map((o) => (
                 <label
@@ -335,6 +420,59 @@ function Mail() {
             {errorText("body")}
           </Field>
 
+          {isRfq && (
+            <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-4" aria-describedby="price-hint">
+              <legend className="px-1 text-sm font-bold">Price table (optional)</legend>
+              <p id="price-hint" className="-mt-1 text-xs text-muted">
+                List what you are quoting. The line totals and the grand total are added up for you and shown in the email.
+              </p>
+              {rows.length > 0 && (
+                <div className="flex flex-col gap-2.5">
+                  <div className="hidden md:grid grid-cols-[1fr_84px_120px_110px_36px] gap-2 px-1 text-[11px] font-bold uppercase tracking-wider text-muted">
+                    <span>Item</span><span>Qty</span><span>Unit price</span><span className="text-right">Total</span><span />
+                  </div>
+                  {rows.map((r, i) => (
+                    <div key={i} className="grid grid-cols-2 md:grid-cols-[1fr_84px_120px_110px_36px] gap-2 items-center">
+                      <input aria-label={`Row ${i + 1} item`} placeholder="Description" value={r.description} maxLength={200} onChange={(e) => setRow(i, "description", e.target.value)} className={`${inputClass} col-span-2 md:col-span-1`} />
+                      <input aria-label={`Row ${i + 1} quantity`} inputMode="decimal" placeholder="Qty" value={r.quantity} onChange={(e) => setRow(i, "quantity", e.target.value)} className={inputClass} />
+                      <input aria-label={`Row ${i + 1} unit price`} inputMode="decimal" placeholder="Unit price" value={r.unit_price} onChange={(e) => setRow(i, "unit_price", e.target.value)} className={inputClass} />
+                      <span className="md:text-right text-sm font-bold tabular-nums">{money(num(r.quantity) * num(r.unit_price), currency)}</span>
+                      <button type="button" aria-label={`Remove row ${i + 1}`} onClick={() => setEmail((prev) => ({ ...prev, items: prev.items.filter((_, k) => k !== i) }))} className="size-9 flex items-center justify-center rounded-lg text-[#a3261a] hover:bg-[#fbe9e7] justify-self-end"><LuTrash2 /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {errorText("items")}
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => setEmail((prev) => ({ ...prev, items: [...prev.items, blankRow()] }))} className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-[#d5d0dd] text-sm font-bold hover:bg-bgcolor">
+                  <LuPlus /> Add a row
+                </button>
+                {rows.length > 0 && (
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    Currency
+                    <select value={currency} onChange={(e) => updateEmail("currency", e.target.value)} className="h-10 rounded-xl border border-[#d5d0dd] bg-white px-2.5 text-sm font-semibold">
+                      {CURRENCIES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                    </select>
+                  </label>
+                )}
+              </div>
+              {rows.length > 0 && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.2fr]">
+                  <Field label="Delivery (optional)" htmlFor="mail-shipping">
+                    <input id="mail-shipping" inputMode="decimal" className={inputClass} value={email.shipping} placeholder="0.00" onChange={(e) => updateEmail("shipping", e.target.value)} />
+                  </Field>
+                  <Field label="VAT % (optional)" htmlFor="mail-vat">
+                    <input id="mail-vat" inputMode="decimal" className={inputClass} value={email.vat_percent} placeholder="7.5" onChange={(e) => updateEmail("vat_percent", e.target.value)} />
+                  </Field>
+                  <div className="flex flex-col justify-end rounded-xl bg-lilac/50 px-4 py-2.5 text-sm" aria-live="polite">
+                    <span className="text-muted">Subtotal {money(subtotal, currency)}</span>
+                    <span className="font-extrabold text-purple">Total {money(total, currency)}</span>
+                  </div>
+                </div>
+              )}
+            </fieldset>
+          )}
+
           <div className="flex flex-col gap-2.5">
             <span className="text-sm font-bold">Attachments</span>
             <p className="-mt-1 text-xs text-muted">
@@ -427,35 +565,52 @@ function Mail() {
                 {email.subject || "What's this email about?"}
               </div>
             </div>
-            <div className="px-4 py-5 space-y-3">
-              {isRfq && (
-                <div className="rounded-lg border border-line bg-bgcolor/60 px-3 py-2.5 text-[13px] leading-7">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-                    Quotation
-                  </div>
-                  <div><span className="text-muted">Date</span> <b>{today}</b></div>
-                  <div><span className="text-muted">Reference</span> <b>Assigned when sent</b></div>
-                  <div className="truncate">
-                    <span className="text-muted">Prepared for</span>{" "}
-                    <b>{email.recipient_name || email.recipient || "name@email.com"}</b>
-                  </div>
-                  {validUntil && (
-                    <div><span className="text-muted">Valid until</span> <b>{validUntil}</b></div>
-                  )}
+            {/* the email as it will look: dark layout with the photo header */}
+            <div className="bg-[#1c0624] text-[#f1e3f5]">
+              <div className="relative px-4 pt-3.5 pb-4 min-h-[120px] flex flex-col justify-between" style={{ backgroundImage: "url(/email/header.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}>
+                <div className="flex items-center justify-between">
+                  <img src={logoWhite} alt="GH Procurement" className="h-6 w-auto" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-peach">{isRfq ? "Quotation" : "From the GH Procurement team"}</span>
                 </div>
-              )}
-              <div className="text-lg font-extrabold break-words">
-                {email.title || "Topic of discussion"}
+                <div className="text-lg font-extrabold leading-tight text-white break-words mt-6">{email.title || email.subject || "Topic of discussion"}</div>
               </div>
-              <div className="text-sm leading-relaxed text-ink/80 whitespace-pre-wrap break-words">
-                {email.body || "Your message appears here as you type."}
-              </div>
-              {email.attachments.length > 0 && (
-                <div className="border-t border-line pt-3 text-[13px] text-muted">
-                  {email.attachments.length}{" "}
-                  {email.attachments.length === 1 ? "attachment" : "attachments"}
+              <div className="px-4 py-4 space-y-3">
+                {isRfq && (
+                  <div className="rounded-lg bg-[#2a0a36] px-3 py-2.5 text-[12.5px] leading-7">
+                    <div className="flex justify-between gap-3"><span className="text-[#c7b0cf]">Date</span><b className="text-white">{today}</b></div>
+                    <div className="flex justify-between gap-3"><span className="text-[#c7b0cf]">Reference</span><b className="text-white">Assigned when sent</b></div>
+                    <div className="flex justify-between gap-3"><span className="text-[#c7b0cf]">Prepared for</span><b className="text-white truncate">{email.recipient_name || email.recipient || "name@email.com"}</b></div>
+                    {order && email.rfq && <div className="flex justify-between gap-3"><span className="text-[#c7b0cf]">Your request</span><b className="text-white">{order.reference}</b></div>}
+                    {validUntil && <div className="flex justify-between gap-3"><span className="text-[#c7b0cf]">Valid until</span><b className="text-peach">{validUntil}</b></div>}
+                  </div>
+                )}
+                <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {email.body || "Your message appears here as you type."}
                 </div>
-              )}
+                {isRfq && filled.length > 0 && (
+                  <div className="rounded-lg bg-[#2a0a36] overflow-hidden text-[12.5px]" aria-label="Price breakdown preview">
+                    <div className="px-3 pt-2.5 pb-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-peach">Price breakdown ({currency})</div>
+                    {filled.map((r, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2 border-t border-[#35114a]">
+                        <span className="break-words text-white">{r.description || "Item"} <span className="text-[#c7b0cf]">× {r.quantity || 0} @ {money(num(r.unit_price), currency)}</span></span>
+                        <b className="text-white tabular-nums">{money(lines[i], currency)}</b>
+                      </div>
+                    ))}
+                    <div className="px-3 py-1.5 border-t border-[#43185a] flex justify-between text-[#c7b0cf]"><span>Subtotal</span><span className="text-white tabular-nums">{money(subtotal, currency)}</span></div>
+                    {ship > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>Delivery</span><span className="text-white tabular-nums">{money(ship, currency)}</span></div>}
+                    {num(email.vat_percent) > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>VAT ({num(email.vat_percent)}%)</span><span className="text-white tabular-nums">{money(vat, currency)}</span></div>}
+                    <div className="px-3 py-2.5 border-t border-[#43185a] flex justify-between font-extrabold text-peach"><span>TOTAL</span><span className="tabular-nums text-base">{money(total, currency)}</span></div>
+                  </div>
+                )}
+                {email.attachments.length > 0 && (
+                  <div className="rounded-lg bg-[#2a0a36] px-3 py-2 text-[12.5px] text-[#c7b0cf]">
+                    {email.attachments.length} {email.attachments.length === 1 ? "attachment" : "attachments"}
+                  </div>
+                )}
+                {!isRfq && <div className="text-center"><span className="inline-block rounded-full bg-peach px-5 py-2 text-[12.5px] font-extrabold text-purple">Reply to this email</span></div>}
+                {isRfq && email.rfq && <div className="text-center"><span className="inline-block rounded-full bg-peach px-5 py-2 text-[12.5px] font-extrabold text-purple">See my order</span></div>}
+                <div className="border-t border-[#3d1649] pt-3 text-center text-[12.5px]">Regards,<br /><b className="text-peach">Lawal Abdur-Razaq</b></div>
+              </div>
             </div>
           </div>
         </aside>
