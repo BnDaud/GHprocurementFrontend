@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2, LuImage } from "react-icons/lu";
+import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2, LuImage, LuSave } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import logoWhite from "../images/logo-white.png";
@@ -10,6 +10,7 @@ import {
   Spinner,
   ErrorBanner,
   btnPrimary,
+  btnSecondary,
   inputClass,
   textareaClass,
 } from "../component/ui";
@@ -111,6 +112,15 @@ function PreviewPic({ file }) {
   return url ? <img src={url} alt="" className="size-9 shrink-0 rounded-md bg-white object-cover" /> : null;
 }
 
+// the rows of a saved draft (typed text only; pictures are not kept in drafts)
+const draftRows = (raw) => {
+  try {
+    return JSON.parse(raw || "[]").map((r) => ({ description: r.description || "", quantity: r.quantity || "1", unit_price: r.unit_price || "", image: null }));
+  } catch {
+    return [];
+  }
+};
+
 const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null });
 
 function Mail() {
@@ -134,8 +144,26 @@ function Mail() {
   const location = useLocation();
   const reply = location.state?.reply;
   const order = location.state?.quote; // { id, reference, recipient, recipient_name, item }
+  const saved = location.state?.draft; // a saved draft opened from Sent mail
+  const [draftId, setDraftId] = useState(saved?.id || null);
   const [email, setEmail] = useState(() =>
-    order
+    saved
+      ? {
+          ...initalState,
+          kind: saved.kind || "outreach",
+          recipient: saved.recipient || "",
+          recipient_name: saved.recipient_name || "",
+          subject: saved.subject || "",
+          title: saved.title || "",
+          body: saved.body || "",
+          valid_days: saved.valid_days ? String(saved.valid_days) : "",
+          items: draftRows(saved.draft?.items),
+          currency: saved.draft?.currency || "",
+          shipping: saved.draft?.shipping || "",
+          vat_percent: saved.draft?.vat_percent || "",
+          rfq: saved.rfq ? String(saved.rfq) : "",
+        }
+      : order
       ? {
           ...initalState,
           kind: "rfq_reply",
@@ -257,6 +285,7 @@ function Mail() {
       email.attachments.forEach((file) => {
         formData.append("attachments", file);
       });
+      if (draftId) formData.append("draft_id", draftId);
 
       doFetch({ url: API.emails(), method: "POST", body: formData });
       setSubmit(false); // reset submit
@@ -266,11 +295,35 @@ function Mail() {
   useEffect(() => {
     if (success) {
       setSent(true);
+      setDraftId(null); // the server removes the draft once the email is on its way
+      setDraftSaved(false);
       setSentReference(data?.reference || "");
       setSentOrder(email.rfq ? String(email.rfq) : "");
       setEmail((prev) => ({ ...initalState, kind: prev.kind })); // keep the chosen template
     }
   }, [success]);
+
+  const draftFetch = useFetch();
+  const [draftSaved, setDraftSaved] = useState(false);
+  const saveDraft = () => {
+    const f = new FormData();
+    f.append("save_draft", "1");
+    ["kind", "recipient", "recipient_name", "subject", "title", "body", "valid_days", "shipping", "vat_percent", "rfq"].forEach((k) => {
+      if (email[k] !== undefined && email[k] !== null) f.append(k, email[k]);
+    });
+    f.append("currency", email.currency || "");
+    f.append("items", JSON.stringify(rows.map((r) => ({ description: r.description, quantity: String(r.quantity), unit_price: String(r.unit_price) }))));
+    if (draftId) f.append("draft_id", draftId);
+    setDraftSaved(false);
+    draftFetch.doFetch({ url: API.emails(), method: "POST", body: f });
+  };
+  useEffect(() => {
+    if (draftFetch.success && draftFetch.data?.id) {
+      setDraftId(draftFetch.data.id);
+      setDraftSaved(true);
+      setSent(false);
+    }
+  }, [draftFetch.success]);
 
   const errorText = (key) =>
     errors[key] && (
@@ -286,6 +339,17 @@ function Mail() {
         title="Send email"
         subtitle="Compose a message from GH Procurement. Attachments are optional."
       />
+
+      {draftSaved && (
+        <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-[#bfe0cb] bg-[#e6f2ea] px-4 py-3 text-sm font-semibold text-[#12633a]">
+          <LuCircleCheck className="text-lg" />
+          <span>
+            Draft saved. Pictures and attachments are not kept in drafts, so add them again before sending.{" "}
+            <Link to="/sent" className="underline">Open Sent mail</Link>
+          </span>
+        </div>
+      )}
+      {draftFetch.err && <ErrorBanner>The draft could not be saved. Check your connection and try again.</ErrorBanner>}
 
       {sent && (
         <div
@@ -573,6 +637,10 @@ function Mail() {
             <span className="text-[13px] text-muted">
               Sends immediately. The form clears after a successful send.
             </span>
+            <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={saveDraft} disabled={draftFetch.loading || loading} className={btnSecondary}>
+              {draftFetch.loading ? <Spinner className="text-purple text-xl" /> : <><LuSave className="text-lg" />{draftId ? "Update draft" : "Save draft"}</>}
+            </button>
             <button type="submit" disabled={loading} className={btnPrimary}>
               {loading ? (
                 <Spinner className="text-peach text-xl" />
@@ -583,6 +651,7 @@ function Mail() {
                 </>
               )}
             </button>
+            </div>
           </div>
         </form>
 

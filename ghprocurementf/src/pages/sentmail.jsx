@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
-import { LuSearch, LuInbox, LuPaperclip, LuX, LuMail, LuDownload, LuImage } from "react-icons/lu";
+import { Link, useNavigate } from "react-router-dom";
+import { LuSearch, LuInbox, LuPaperclip, LuX, LuMail, LuDownload, LuImage, LuPencil, LuTrash2 } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { authHeaders } from "../auth/auth";
@@ -43,8 +43,29 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-function Detail({ id, onClose }) {
+function Detail({ id, onClose, onChanged }) {
   const { data, loading, err, doFetch } = useFetch();
+  const navigate = useNavigate();
+  const isDraft = data?.status === "draft";
+  const [removing, setRemoving] = useState(false);
+
+  const editDraft = () => navigate("/mail", { state: { draft: data } });
+  const removeDraft = async () => {
+    if (!window.confirm("Delete this draft? This cannot be undone.")) return;
+    setRemoving(true);
+    try {
+      const r = await fetch(`${API.sentEmails(id)}discard/`, { method: "POST", headers: authHeaders() });
+      if (r.ok) {
+        onChanged?.();
+        onClose();
+        return;
+      }
+    } catch {
+      /* shown below */
+    }
+    setRemoving(false);
+    setHtmlErr(true);
+  };
 
   useEffect(() => {
     doFetch({ url: API.sentEmails(id), method: "GET" });
@@ -125,7 +146,7 @@ function Detail({ id, onClose }) {
           </button>
         </div>
 
-        {data && (
+        {data && !isDraft && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-2.5">
             <div role="tablist" aria-label="View" className="inline-flex rounded-xl bg-bgcolor p-1">
               {[["details", "Details"], ["email", "Email as sent"]].map(([k, label]) => (
@@ -147,7 +168,7 @@ function Detail({ id, onClose }) {
           </div>
         )}
 
-        {view === "email" && data ? (
+        {view === "email" && data && !isDraft ? (
           <div className="flex flex-1 min-h-0 flex-col bg-[#efecf3]">
             {htmlErr ? (
               <div className="p-6"><ErrorBanner>The email could not be shown.</ErrorBanner></div>
@@ -181,7 +202,7 @@ function Detail({ id, onClose }) {
                   {data.recipient_name ? `${data.recipient_name} · ` : ""}
                   {data.recipient}
                 </Row>
-                <Row label="Sent">{fmtDate(data.sent_at || data.created_at)}</Row>
+                <Row label={isDraft ? "Saved" : "Sent"}>{fmtDate(data.sent_at || data.created_at)}</Row>
                 {data.valid_days ? (
                   <Row label="Valid for">{data.valid_days} days</Row>
                 ) : null}
@@ -285,7 +306,17 @@ function Detail({ id, onClose }) {
         </div>
         )}
 
-        <div className="flex justify-end px-6 py-4 border-t border-line">
+        <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-4 border-t border-line">
+          {isDraft && (
+            <>
+              <button type="button" onClick={removeDraft} disabled={removing} className={`${btnSecondary} mr-auto !text-[#a3261a]`}>
+                <LuTrash2 /> Delete draft
+              </button>
+              <button type="button" onClick={editDraft} className={btnPrimary}>
+                <LuPencil /> Edit and send
+              </button>
+            </>
+          )}
           <button type="button" onClick={onClose} className={btnSecondary}>
             Close
           </button>
@@ -311,7 +342,7 @@ export default function SentMail() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return all.filter((m) => {
-      if (kind !== "all" && m.kind !== kind) return false;
+      if (kind === "draft" ? m.status !== "draft" : kind !== "all" && m.kind !== kind) return false;
       if (!q) return true;
       return [m.reference, m.recipient, m.recipient_name, m.subject]
         .filter(Boolean)
@@ -319,7 +350,7 @@ export default function SentMail() {
     });
   }, [all, kind, query]);
 
-  const count = (k) => (k === "all" ? all.length : all.filter((m) => m.kind === k).length);
+  const count = (k) => (k === "all" ? all.length : k === "draft" ? all.filter((m) => m.status === "draft").length : all.filter((m) => m.kind === k).length);
 
   return (
     <div className="space-y-6">
@@ -346,6 +377,7 @@ export default function SentMail() {
               ["all", "All"],
               ["rfq_reply", "Quote replies"],
               ["outreach", "Outreach"],
+              ["draft", "Drafts"],
             ].map(([value, label]) => (
               <button
                 key={value}
@@ -407,13 +439,13 @@ export default function SentMail() {
                 {shown.map((m) => (
                   <tr key={m.id} className="border-t border-line hover:bg-bgcolor/50">
                     <td className="px-4 pl-5 py-3.5 whitespace-nowrap font-bold">
-                      {m.reference || <span className="font-normal text-muted">{KINDS[m.kind]}</span>}
+                      {m.reference || <span className="font-normal text-muted">{m.status === "draft" ? "Draft" : KINDS[m.kind]}</span>}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-ink/80">
                       {fmtDate(m.sent_at || m.created_at)}
                     </td>
                     <td className="px-4 py-3.5 max-w-[220px]">
-                      <div className="truncate font-semibold">{m.recipient_name || m.recipient}</div>
+                      <div className="truncate font-semibold">{m.recipient_name || m.recipient || <span className="font-normal text-muted">No recipient yet</span>}</div>
                       {m.recipient_name && (
                         <div className="truncate text-xs text-muted">{m.recipient}</div>
                       )}
@@ -443,7 +475,7 @@ export default function SentMail() {
         )}
       </section>
 
-      {openId && <Detail id={openId} onClose={() => setOpenId(null)} />}
+      {openId && <Detail id={openId} onClose={() => setOpenId(null)} onChanged={load} />}
     </div>
   );
 }
