@@ -6,6 +6,7 @@ import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { authHeaders } from "../auth/auth";
 import watermark from "../images/watermark.png";
+import logoWhite from "../images/logo-white.png";
 import {
   PageHeader,
   StatusChip,
@@ -90,23 +91,84 @@ function Detail({ id, onClose, onChanged }) {
     };
   }, [view, html, htmlUrl]);
 
+  // The email as a PDF, drawn from the very same HTML you see, so it looks identical.
+  // (The two libraries load only when you press Download.)
   const download = async () => {
     setSaving(true);
+    let frame;
     try {
-      const r = await fetch(`${htmlUrl}?download=1`, { headers: authHeaders() });
-      if (!r.ok) throw new Error("failed");
-      const url = URL.createObjectURL(await r.blob());
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${data?.reference || "email"}.html`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const markup = html ?? (await fetch(htmlUrl, { headers: authHeaders() }).then((r) => (r.ok ? r.text() : Promise.reject(new Error("failed")))));
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+
+      frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "allow-same-origin"); // no scripts can run in it
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:700px;height:1000px;border:0;visibility:hidden";
+      document.body.appendChild(frame);
+      await new Promise((resolve) => {
+        frame.onload = resolve;
+        frame.srcdoc = markup;
+      });
+      const doc = frame.contentDocument;
+      await Promise.all(
+        [...doc.images].map((img) => (img.complete ? null : new Promise((res) => { img.onload = res; img.onerror = res; })))
+      );
+      const target = doc.documentElement;
+      const canvas = await html2canvas(doc.body, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: getComputedStyle(doc.body).backgroundColor || "#ffffff",
+        windowWidth: 700,
+        width: 700,
+        height: Math.max(target.scrollHeight, doc.body.scrollHeight),
+      });
+
+      // the company logo, faint and slanted, on every page (white, because the email is dark)
+      const mark = await new Promise((res) => {
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = () => res(null);
+        im.src = logoWhite;
+      });
+      // one page as long as the email (nothing is cut in half); only a very long one is split into A4 pages
+      const A4W = 595.28;
+      const fit = A4W / canvas.width; // canvas px -> pdf pt
+      const whole = canvas.height * fit <= 14000;
+      const pdf = new jsPDF({ unit: "pt", format: whole ? [A4W, canvas.height * fit] : "a4", compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const sliceH = whole ? canvas.height : Math.floor(pageH / fit); // canvas px per page
+      const bg = getComputedStyle(doc.body).backgroundColor || "#ffffff";
+      const rgb = (bg.match(/\d+/g) || [255, 255, 255]).slice(0, 3).map(Number);
+      for (let y = 0, page = 0; y < canvas.height; y += sliceH, page += 1) {
+        const part = document.createElement("canvas");
+        part.width = canvas.width;
+        part.height = Math.min(sliceH, canvas.height - y);
+        const ctx = part.getContext("2d");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, part.width, part.height);
+        ctx.drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
+        if (mark) {
+          const w = part.width * 0.62;
+          const h = (w * mark.height) / mark.width;
+          ctx.save();
+          ctx.globalAlpha = 0.07;
+          ctx.translate(part.width / 2, sliceH / 2);
+          ctx.rotate((-22 * Math.PI) / 180);
+          ctx.drawImage(mark, -w / 2, -h / 2, w, h);
+          ctx.restore();
+        }
+        if (page > 0) pdf.addPage();
+        pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
+        pdf.rect(0, 0, pageW, pageH, "F"); // a short last page keeps the same background
+        pdf.addImage(part.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pageW, part.height * fit);
+      }
+      pdf.save(`${data?.reference || "email"}.pdf`);
     } catch {
       setHtmlErr(true);
+    } finally {
+      frame?.remove();
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   useEffect(() => {

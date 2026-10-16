@@ -80,7 +80,7 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 // a small picture beside an item (optional); shows its own preview and can be cleared
-function RowPicture({ file, label, onPick, size = "size-10" }) {
+function RowPicture({ file, remote, label, onPick, size = "size-10" }) {
   const [url, setUrl] = useState("");
   useEffect(() => {
     if (!file) { setUrl(""); return undefined; }
@@ -91,11 +91,11 @@ function RowPicture({ file, label, onPick, size = "size-10" }) {
   return (
     <span className="relative inline-flex shrink-0">
       <label className={`${size} flex cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-[#b9a6c4] bg-lilac/50 text-purple hover:bg-lilac focus-within:outline focus-within:outline-2 focus-within:outline-purple`} title={file ? "Change picture" : "Add a picture (optional)"}>
-        {url ? <img src={url} alt="" className="size-full object-cover" /> : <LuImage aria-hidden="true" />}
+        {url || remote ? <img src={url || remote} alt="" className="size-full object-cover" /> : <LuImage aria-hidden="true" />}
         <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label={label}
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPick(f); }} />
       </label>
-      {file && (
+      {(file || remote) && (
         <button type="button" aria-label="Remove picture" onClick={() => onPick(null)} className="absolute -right-1.5 -top-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-white text-[11px] text-[#a3261a] shadow ring-1 ring-line"><LuX /></button>
       )}
     </span>
@@ -115,13 +115,13 @@ function PreviewPic({ file }) {
 // the rows of a saved draft (typed text only; pictures are not kept in drafts)
 const draftRows = (raw) => {
   try {
-    return JSON.parse(raw || "[]").map((r) => ({ description: r.description || "", quantity: r.quantity || "1", unit_price: r.unit_price || "", image: null }));
+    return JSON.parse(raw || "[]").map((r) => ({ description: r.description || "", quantity: r.quantity || "1", unit_price: r.unit_price || "", image: null, rfq_item: r.rfq_item || "", thumb: r.thumb || "" }));
   } catch {
     return [];
   }
 };
 
-const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null });
+const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null, rfq_item: "", thumb: "" });
 
 function Mail() {
   const initalState = {
@@ -172,7 +172,9 @@ function Mail() {
           subject: `Your quotation, ${order.reference}`,
           title: "Your quotation",
           body: `Hello ${String(order.recipient_name || "").split(" ")[0] || "there"},\n\nThank you for your request ${order.reference}. Please find our prices below.\n\nLet us know if you would like to go ahead.`,
-          items: [blankRow(String(order.item || "").split("\n")[0].slice(0, 200))],
+          items: order.items?.length
+            ? order.items.map((i) => ({ ...blankRow(i.description), quantity: String(i.quantity), rfq_item: i.thumb ? String(i.id) : "", thumb: i.thumb || "" }))
+            : [blankRow(String(order.item || "").split("\n")[0].slice(0, 200))],
           rfq: String(order.id),
         }
       : reply
@@ -273,7 +275,7 @@ function Mail() {
         if (filled.length) {
           const pictures = filled.map((r) => r.image).filter(Boolean);
           let next = 0;
-          formData.append("items", JSON.stringify(filled.map((r) => ({ description: r.description.trim(), quantity: String(num(r.quantity)), unit_price: String(num(r.unit_price)), image: r.image ? next++ : null }))));
+          formData.append("items", JSON.stringify(filled.map((r) => ({ description: r.description.trim(), quantity: String(num(r.quantity)), unit_price: String(num(r.unit_price)), image: r.image ? next++ : null, rfq_item: !r.image && r.rfq_item ? r.rfq_item : undefined }))));
           pictures.forEach((f) => formData.append("item_images", f));
           formData.append("currency", currency);
           formData.append("shipping", email.shipping);
@@ -534,7 +536,7 @@ function Mail() {
                   {rows.map((r, i) => (
                     <div key={i} className="grid grid-cols-2 md:grid-cols-[1fr_84px_120px_110px_36px] gap-2 items-center">
                       <div className="col-span-2 flex items-center gap-2 md:col-span-1">
-                        <RowPicture file={r.image} label={`Row ${i + 1} picture`} onPick={(f) => setRow(i, "image", f)} />
+                        <RowPicture file={r.image} remote={r.thumb} label={`Row ${i + 1} picture`} onPick={(f) => (f ? setEmail((prev) => ({ ...prev, items: prev.items.map((x, k) => (k === i ? { ...x, image: f, thumb: "", rfq_item: "" } : x)) })) : setEmail((prev) => ({ ...prev, items: prev.items.map((x, k) => (k === i ? { ...x, image: null, thumb: "", rfq_item: "" } : x)) })))} />
                         <input aria-label={`Row ${i + 1} item`} placeholder="Description" value={r.description} maxLength={200} onChange={(e) => setRow(i, "description", e.target.value)} className={`${inputClass} min-w-0 flex-1`} />
                       </div>
                       <input aria-label={`Row ${i + 1} quantity`} inputMode="decimal" placeholder="Qty" value={r.quantity} onChange={(e) => setRow(i, "quantity", e.target.value)} className={inputClass} />

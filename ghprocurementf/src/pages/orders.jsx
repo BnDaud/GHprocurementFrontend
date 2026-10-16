@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX, LuFileText } from "react-icons/lu";
+import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX, LuFileText, LuImage } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import { authHeaders, notifyUnauthorized } from "../auth/auth";
 import {
   PageHeader,
   Spinner,
@@ -210,6 +211,16 @@ function OrderDetail({ id }) {
   const [address, setAddress] = useState("");
   const [savedAddress, setSavedAddress] = useState(false);
 
+  const removePictures = async () => {
+    if (!window.confirm("Delete this customer's pictures now? The items and quantities stay.")) return;
+    try {
+      const res = await fetch(`${API.rfqs(id)}remove-pictures/`, { method: "POST", headers: authHeaders() });
+      if (res.status === 401) notifyUnauthorized();
+    } catch {
+      /* the page below reloads and shows what is still there */
+    }
+    reload();
+  };
   const reload = () => {
     rfq.doFetch({ url: API.rfqs(id), method: "GET" });
     ups.doFetch({ url: API.rfqUpdates(id), method: "GET" });
@@ -332,7 +343,7 @@ function OrderDetail({ id }) {
         <PageHeader title={firstLine(r.item)} subtitle={`${r.reference || "No reference"} · sent ${fmt(r.created_at)}`}>
           <button
             type="button"
-            onClick={() => navigate("/mail", { state: { quote: { id: r.id, reference: r.reference, recipient: r.email, recipient_name: r.name, item: r.item } } })}
+            onClick={() => navigate("/mail", { state: { quote: { id: r.id, reference: r.reference, recipient: r.email, recipient_name: r.name, item: r.item, items: (r.items || []).map((i) => ({ id: i.id, description: i.description, quantity: i.quantity, thumb: i.has_picture ? i.thumb : "" })) } } })}
             className={btnPrimary}
           >
             <LuFileText className="text-lg" /> Send quotation
@@ -406,7 +417,36 @@ function OrderDetail({ id }) {
               <dt className="text-muted">Phone</dt><dd className="font-bold">{r.phone || "-"}</dd>
             </dl>
             <p className="mt-4 mb-1 text-xs font-bold uppercase tracking-wider text-muted">What they asked for</p>
-            <p className="whitespace-pre-wrap break-words text-sm">{r.item}</p>
+            {r.items?.length > 0 ? (
+              <>
+                <ul className="flex flex-col gap-2" aria-label="Items requested">
+                  {r.items.map((i) => (
+                    <li key={i.id} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2 text-sm">
+                      {i.has_picture && i.thumb ? (
+                        <a href={i.picture} target="_blank" rel="noreferrer" aria-label={`Open picture of ${i.description}`} className="size-14 flex-none overflow-hidden rounded-lg border border-line bg-bgcolor">
+                          <img src={i.thumb} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                        </a>
+                      ) : (
+                        <span className="flex size-14 flex-none items-center justify-center rounded-lg border border-dashed border-line text-lg text-muted" title={r.pictures_removed_at ? "Picture deleted" : "No picture"}><LuImage aria-hidden="true" /></span>
+                      )}
+                      <span className="min-w-0 flex-1 break-words font-semibold">{i.description}</span>
+                      <span className="flex-none font-bold tabular-nums text-purple">× {i.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+                {r.item.includes("\n\n") && <p className="mt-3 whitespace-pre-wrap break-words text-sm text-ink/80">{r.item.split("\n\n").slice(1).join("\n\n")}</p>}
+              </>
+            ) : (
+              <p className="whitespace-pre-wrap break-words text-sm">{r.item}</p>
+            )}
+            {(r.items?.some((i) => i.has_picture) || r.file_url) ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={removePictures} className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#e3b6b0] px-3 text-sm font-bold text-[#a3261a] hover:bg-[#fbe9e7]"><LuTrash2 /> Remove pictures</button>
+                <span className="text-xs text-muted">They are also deleted automatically when the order is delivered.</span>
+              </div>
+            ) : r.pictures_removed_at ? (
+              <p className="mt-3 text-xs text-muted">Pictures were deleted on {new Date(r.pictures_removed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.</p>
+            ) : null}
             {r.file_url && (
               <a href={r.file_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-purple underline">
                 Open their picture
