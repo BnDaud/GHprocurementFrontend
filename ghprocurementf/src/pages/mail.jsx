@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2 } from "react-icons/lu";
+import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2, LuImage } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import logoWhite from "../images/logo-white.png";
@@ -78,7 +78,40 @@ const num = (v) => {
   const n = Number(String(v ?? "").replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
 };
-const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "" });
+// a small picture beside an item (optional); shows its own preview and can be cleared
+function RowPicture({ file, label, onPick, size = "size-10" }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    if (!file) { setUrl(""); return undefined; }
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return (
+    <span className="relative inline-flex shrink-0">
+      <label className={`${size} flex cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-[#b9a6c4] bg-lilac/50 text-purple hover:bg-lilac focus-within:outline focus-within:outline-2 focus-within:outline-purple`} title={file ? "Change picture" : "Add a picture (optional)"}>
+        {url ? <img src={url} alt="" className="size-full object-cover" /> : <LuImage aria-hidden="true" />}
+        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label={label}
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onPick(f); }} />
+      </label>
+      {file && (
+        <button type="button" aria-label="Remove picture" onClick={() => onPick(null)} className="absolute -right-1.5 -top-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-white text-[11px] text-[#a3261a] shadow ring-1 ring-line"><LuX /></button>
+      )}
+    </span>
+  );
+}
+
+function PreviewPic({ file }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return url ? <img src={url} alt="" className="size-9 shrink-0 rounded-md bg-white object-cover" /> : null;
+}
+
+const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null });
 
 function Mail() {
   const initalState = {
@@ -210,7 +243,10 @@ function Mail() {
         formData.append("recipient_name", email.recipient_name);
         formData.append("valid_days", email.valid_days); // blank = no validity line
         if (filled.length) {
-          formData.append("items", JSON.stringify(filled.map((r) => ({ description: r.description.trim(), quantity: String(num(r.quantity)), unit_price: String(num(r.unit_price)) }))));
+          const pictures = filled.map((r) => r.image).filter(Boolean);
+          let next = 0;
+          formData.append("items", JSON.stringify(filled.map((r) => ({ description: r.description.trim(), quantity: String(num(r.quantity)), unit_price: String(num(r.unit_price)), image: r.image ? next++ : null }))));
+          pictures.forEach((f) => formData.append("item_images", f));
           formData.append("currency", currency);
           formData.append("shipping", email.shipping);
           formData.append("vat_percent", email.vat_percent);
@@ -433,7 +469,10 @@ function Mail() {
                   </div>
                   {rows.map((r, i) => (
                     <div key={i} className="grid grid-cols-2 md:grid-cols-[1fr_84px_120px_110px_36px] gap-2 items-center">
-                      <input aria-label={`Row ${i + 1} item`} placeholder="Description" value={r.description} maxLength={200} onChange={(e) => setRow(i, "description", e.target.value)} className={`${inputClass} col-span-2 md:col-span-1`} />
+                      <div className="col-span-2 flex items-center gap-2 md:col-span-1">
+                        <RowPicture file={r.image} label={`Row ${i + 1} picture`} onPick={(f) => setRow(i, "image", f)} />
+                        <input aria-label={`Row ${i + 1} item`} placeholder="Description" value={r.description} maxLength={200} onChange={(e) => setRow(i, "description", e.target.value)} className={`${inputClass} min-w-0 flex-1`} />
+                      </div>
                       <input aria-label={`Row ${i + 1} quantity`} inputMode="decimal" placeholder="Qty" value={r.quantity} onChange={(e) => setRow(i, "quantity", e.target.value)} className={inputClass} />
                       <input aria-label={`Row ${i + 1} unit price`} inputMode="decimal" placeholder="Unit price" value={r.unit_price} onChange={(e) => setRow(i, "unit_price", e.target.value)} className={inputClass} />
                       <span className="md:text-right text-sm font-bold tabular-nums">{money(num(r.quantity) * num(r.unit_price), currency)}</span>
@@ -592,7 +631,7 @@ function Mail() {
                     <div className="px-3 pt-2.5 pb-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-peach">Price breakdown ({currency})</div>
                     {filled.map((r, i) => (
                       <div key={i} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2 border-t border-[#35114a]">
-                        <span className="break-words text-white">{r.description || "Item"} <span className="text-[#c7b0cf]">× {r.quantity || 0} @ {money(num(r.unit_price), currency)}</span></span>
+                        <span className="flex items-start gap-2 break-words text-white">{r.image && <PreviewPic file={r.image} />}<span>{r.description || "Item"} <span className="text-[#c7b0cf]">× {r.quantity || 0} @ {money(num(r.unit_price), currency)}</span></span></span>
                         <b className="text-white tabular-nums">{money(lines[i], currency)}</b>
                       </div>
                     ))}
