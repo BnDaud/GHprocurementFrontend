@@ -24,9 +24,26 @@ const write = (key, value) => {
   }
 };
 
+// Signed out after an hour with no activity (mouse, keys, touch, scrolling), in any tab.
+export const IDLE_MS = 60 * 60 * 1000;
+const KEY_ACTIVE = "gh_cms_active";
+let lastWrite = 0;
+
+const idleFor = () => {
+  const at = Number(read(KEY_ACTIVE));
+  return at ? Date.now() - at : 0; // sessions from before this rule have no stamp yet
+};
+
+function touch() {
+  const now = Date.now();
+  if (now - lastWrite < 15000 || !read(KEY_TOKEN)) return;
+  lastWrite = now;
+  write(KEY_ACTIVE, String(now));
+}
+
 export function signOut() {
   try {
-    [KEY_TOKEN, KEY_EXPIRES, KEY_USER].forEach((k) => localStorage.removeItem(k));
+    [KEY_TOKEN, KEY_EXPIRES, KEY_USER, KEY_ACTIVE].forEach((k) => localStorage.removeItem(k));
   } catch {
     /* ignore */
   }
@@ -35,11 +52,27 @@ export function signOut() {
 export function getToken() {
   const token = read(KEY_TOKEN);
   if (!token) return null;
-  if (Date.now() >= Number(read(KEY_EXPIRES) || 0)) {
+  if (Date.now() >= Number(read(KEY_EXPIRES) || 0) || idleFor() > IDLE_MS) {
     signOut();
     return null;
   }
   return token;
+}
+
+if (typeof window !== "undefined") {
+  ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach((ev) =>
+    window.addEventListener(ev, touch, { passive: true, capture: true })
+  );
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized();
+      else touch();
+    }
+  });
+  // checks every 30 seconds, so an open page that nobody touches signs out by itself
+  setInterval(() => {
+    if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized();
+  }, 30000);
 }
 
 export const TOKEN_STORAGE_KEY = KEY_TOKEN;
@@ -67,6 +100,8 @@ export function notifyUnauthorized() {
 
 function keep({ token, expires_in, user }) {
   write(KEY_TOKEN, token);
+  lastWrite = Date.now();
+  write(KEY_ACTIVE, String(lastWrite));
   write(KEY_EXPIRES, String(Date.now() + expires_in * 1000));
   if (user) write(KEY_USER, JSON.stringify(user));
 }
