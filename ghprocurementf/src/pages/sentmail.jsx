@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { LuSearch, LuInbox, LuPaperclip, LuX, LuMail } from "react-icons/lu";
+import { LuSearch, LuInbox, LuPaperclip, LuX, LuMail, LuDownload, LuImage } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import { authHeaders } from "../auth/auth";
+import watermark from "../images/watermark.png";
 import {
   PageHeader,
   StatusChip,
@@ -48,6 +50,44 @@ function Detail({ id, onClose }) {
     doFetch({ url: API.sentEmails(id), method: "GET" });
   }, [id]);
 
+  // "details" = the record; "email" = the email as it went out (rebuilt from the record)
+  const [view, setView] = useState("details");
+  const [html, setHtml] = useState(null);
+  const [htmlErr, setHtmlErr] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const htmlUrl = `${API.sentEmails(id)}html/`;
+
+  useEffect(() => {
+    if (view !== "email" || html !== null) return undefined;
+    let live = true;
+    fetch(htmlUrl, { headers: authHeaders() })
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error("failed"))))
+      .then((t) => live && setHtml(t))
+      .catch(() => live && setHtmlErr(true));
+    return () => {
+      live = false;
+    };
+  }, [view, html, htmlUrl]);
+
+  const download = async () => {
+    setSaving(true);
+    try {
+      const r = await fetch(`${htmlUrl}?download=1`, { headers: authHeaders() });
+      if (!r.ok) throw new Error("failed");
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${data?.reference || "email"}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setHtmlErr(true);
+    }
+    setSaving(false);
+  };
+
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -64,7 +104,7 @@ function Detail({ id, onClose }) {
         aria-modal="true"
         aria-label="Sent email"
         onClick={(e) => e.stopPropagation()}
-        className="flex flex-col w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl"
+        className="flex flex-col w-full max-w-3xl h-[92vh] sm:h-[85vh] sm:max-h-[85vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
           <div className="min-w-0">
@@ -85,7 +125,45 @@ function Detail({ id, onClose }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        {data && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-2.5">
+            <div role="tablist" aria-label="View" className="inline-flex rounded-xl bg-bgcolor p-1">
+              {[["details", "Details"], ["email", "Email as sent"]].map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === k}
+                  onClick={() => setView(k)}
+                  className={`h-9 cursor-pointer rounded-lg px-4 text-sm font-bold ${view === k ? "bg-white text-purple shadow-sm" : "text-muted hover:text-ink"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={download} disabled={saving} className={`${btnSecondary} !h-9 !px-3 text-sm`}>
+              <LuDownload /> {saving ? "Preparing…" : "Download"}
+            </button>
+          </div>
+        )}
+
+        {view === "email" && data ? (
+          <div className="flex flex-1 min-h-0 flex-col bg-[#efecf3]">
+            {htmlErr ? (
+              <div className="p-6"><ErrorBanner>The email could not be shown.</ErrorBanner></div>
+            ) : html === null ? (
+              <div className="flex justify-center py-12"><Spinner className="text-3xl" /></div>
+            ) : (
+              <iframe title="Email as sent" sandbox="" srcDoc={html} className="min-h-0 w-full flex-1 border-0" />
+            )}
+            <p className="shrink-0 border-t border-line bg-white px-4 py-1.5 text-center text-[11px] font-semibold text-muted">
+              Rebuilt from what was saved. Item pictures are not kept.
+            </p>
+          </div>
+        ) : (
+        <div className="relative flex-1 min-h-0 overflow-hidden">
+        <img src={watermark} alt="" aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 w-[min(70%,520px)] -translate-x-1/2 -translate-y-1/2 -rotate-[22deg] select-none opacity-[0.045]" />
+        <div className="relative h-full overflow-y-auto px-6 py-4">
           {loading && !data ? (
             <div className="flex justify-center py-12">
               <Spinner className="text-3xl" />
@@ -146,7 +224,15 @@ function Detail({ id, onClose }) {
                       <tbody>
                         {data.quote.rows.map((r, i) => (
                           <tr key={i} className="border-t border-line">
-                            <td className="px-3 py-2 break-words">{r.description}</td>
+                            <td className="px-3 py-2 break-words">
+                              {r.has_image && (
+                                <span className="mb-1 inline-flex items-center gap-1 rounded-md border border-dashed border-[#b9a6c4] bg-lilac/50 px-1.5 py-0.5 text-[11px] font-semibold text-muted" title="A picture was sent here; pictures are not kept">
+                                  <LuImage aria-hidden="true" /> Picture sent
+                                </span>
+                              )}
+                              {r.has_image && <br />}
+                              {r.description}
+                            </td>
                             <td className="px-3 py-2 text-right tabular-nums">{r.quantity}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{r.unit_price_text}</td>
                             <td className="px-3 py-2 text-right font-semibold tabular-nums">{r.line_total_text}</td>
@@ -196,6 +282,8 @@ function Detail({ id, onClose }) {
             </>
           ) : null}
         </div>
+        </div>
+        )}
 
         <div className="flex justify-end px-6 py-4 border-t border-line">
           <button type="button" onClick={onClose} className={btnSecondary}>
