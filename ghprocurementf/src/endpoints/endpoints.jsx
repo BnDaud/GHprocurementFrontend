@@ -20,6 +20,7 @@ const API = {
   inboxMarkAllRead: () => `${BASEURL}/inbox/mark-all-read/`,
   admins: (arg = "") => `${BASEURL}/admins/${arg && arg + "/"}`,
   rfqs: (arg = "") => `${BASEURL}/rfqs/${arg && arg + "/"}`,
+  rfqDocuments: (id) => `${BASEURL}/rfqs/${id}/documents/`,
   rfqMessages: (id) => `${BASEURL}/rfqs/${id}/messages/`,
   attention: () => `${BASEURL}/attention/`,
   rfqUpdates: (id, uid = "") => `${BASEURL}/rfqs/${id}/updates/${uid && uid + "/"}`,

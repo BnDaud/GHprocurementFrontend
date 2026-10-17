@@ -4,6 +4,7 @@ import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX, L
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import OrderMessages from "../component/ordermessages";
+import OrderDocuments from "../component/orderdocuments";
 import { authHeaders, notifyUnauthorized } from "../auth/auth";
 import {
   PageHeader,
@@ -197,7 +198,7 @@ function OrdersList() {
 }
 
 // ---------------------------------------------------------------- detail
-const blank = { stage: "received", headline: "", details: "", location: "", estimated_delivery: "" };
+const blank = { stage: "received", headline: "", details: "", location: "", estimated_delivery: "", carrier: "", tracking_number: "", tracking_url: "" };
 
 function OrderDetail({ id }) {
   const navigate = useNavigate();
@@ -238,7 +239,7 @@ function OrderDetail({ id }) {
     if (r) {
       setAddress(r.delivery_address || "");
       // new updates start at the order's current stage
-      setForm((f) => (f.headline || editingId ? f : { ...f, stage: r.status, estimated_delivery: r.estimated_delivery || "" }));
+      setForm((f) => (f.headline || editingId ? f : { ...f, stage: r.status, estimated_delivery: r.estimated_delivery || "", carrier: r.carrier || "", tracking_number: r.tracking_number || "", tracking_url: r.tracking_url || "" }));
     }
   }, [r]);
 
@@ -251,7 +252,7 @@ function OrderDetail({ id }) {
   // a finished call: refresh and clear
   useEffect(() => {
     if (post.success) {
-      setForm({ ...blank, stage: form.stage, estimated_delivery: form.estimated_delivery });
+      setForm({ ...blank, stage: form.stage, estimated_delivery: form.estimated_delivery, carrier: form.carrier, tracking_number: form.tracking_number, tracking_url: form.tracking_url });
       reload();
     }
   }, [post.success]);
@@ -300,20 +301,26 @@ function OrderDetail({ id }) {
       post.doFetch({
         url: API.rfqUpdates(id),
         method: "POST",
-        body: { ...body, estimated_delivery: form.estimated_delivery || null },
+        body: {
+          ...body,
+          estimated_delivery: form.estimated_delivery || null,
+          carrier: form.carrier.trim(),
+          tracking_number: form.tracking_number.trim(),
+          tracking_url: form.tracking_url.trim(),
+        },
       });
     }
   };
 
   const startEdit = (u) => {
     setEditingId(u.id);
-    setForm({ stage: u.stage, headline: u.headline, details: u.details || "", location: u.location || "", estimated_delivery: r?.estimated_delivery || "" });
+    setForm({ ...blank, stage: u.stage, headline: u.headline, details: u.details || "", location: u.location || "", estimated_delivery: r?.estimated_delivery || "" });
     setError("");
     document.getElementById("post-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
   const cancelEdit = () => {
     setEditingId(null);
-    setForm({ ...blank, stage: r?.status || "received", estimated_delivery: r?.estimated_delivery || "" });
+    setForm({ ...blank, stage: r?.status || "received", estimated_delivery: r?.estimated_delivery || "", carrier: r?.carrier || "", tracking_number: r?.tracking_number || "", tracking_url: r?.tracking_url || "" });
     setError("");
   };
 
@@ -391,6 +398,23 @@ function OrderDetail({ id }) {
                 </Field>
               )}
             </div>
+            {!editingId && (form.stage === "shipped" || form.stage === "customs" || r.carrier || r.tracking_number) && (
+              <fieldset className="rounded-xl border border-line p-4 flex flex-col gap-4">
+                <legend className="px-1 text-sm font-bold">Shipment (optional)</legend>
+                <p className="-mt-1 text-xs text-muted">The customer sees these on their order page and in this update's email.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Carrier" htmlFor="up-carrier">
+                    <input id="up-carrier" className={inputClass} value={form.carrier} onChange={set("carrier")} placeholder="DHL Express" maxLength={120} />
+                  </Field>
+                  <Field label="Tracking number" htmlFor="up-track">
+                    <input id="up-track" className={inputClass} value={form.tracking_number} onChange={set("tracking_number")} placeholder="1234567890" maxLength={120} />
+                  </Field>
+                </div>
+                <Field label="Tracking link" htmlFor="up-link" hint="Leave empty for DHL, FedEx, UPS and Aramex: the link is made from the tracking number.">
+                  <input id="up-link" type="url" className={inputClass} value={form.tracking_url} onChange={set("tracking_url")} placeholder="https://" maxLength={500} />
+                </Field>
+              </fieldset>
+            )}
             {!editingId && <p className="text-[13px] text-muted">{r.name?.split(" ")[0] || "The customer"} is emailed about this update automatically ({r.email}).</p>}
             <div className="flex flex-wrap items-center gap-3">
               <button type="submit" disabled={busy} className={btnPrimary}>
@@ -473,6 +497,7 @@ function OrderDetail({ id }) {
             </form>
           </section>
 
+          <OrderDocuments id={id} items={r.documents || []} onChanged={reload} />
           <OrderMessages id={id} />
           <section className="rounded-2xl border border-line bg-white p-5 md:p-6" aria-labelledby="seen-title">
             <h2 id="seen-title" className="text-base font-extrabold text-purple mb-4">What the customer sees</h2>
