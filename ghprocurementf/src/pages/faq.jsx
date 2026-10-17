@@ -45,7 +45,7 @@ const Faqs = () => {
       />
     </Field>,
 
-    <Field full label="Answer" htmlFor="faq-answer">
+    <Field full label="Answer" htmlFor="faq-answer" hint="To show your contact details from Settings, type {phone}, {email} or {office}. They update by themselves if you change them in Settings.">
       <textarea
         id="faq-answer"
         placeholder="Shipping takes about 3 weeks..."
