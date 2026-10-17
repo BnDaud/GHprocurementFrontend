@@ -78,6 +78,8 @@ function Modal({
             } else if (Array.isArray(value) && value[0] instanceof File) {
               // Handle arrays of files
               value.forEach((file) => body.append(key, file));
+            } else if (value === null || value === undefined) {
+              // nothing to send (an empty optional field stays as it is)
             } else {
               // Handle text or single file
               body.append(key, value);

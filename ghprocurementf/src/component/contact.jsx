@@ -24,6 +24,19 @@ function Contact({ meta, updateMeta }) {
           />
         </Field>
       </div>
+      <Field
+        label="WhatsApp number"
+        htmlFor="contact-whatsapp"
+        hint="The chat buttons on the website open this number. Leave empty to use the phone number above."
+      >
+        <input
+          id="contact-whatsapp"
+          className={inputClass}
+          value={meta.whatsapp_number ?? ""}
+          placeholder="+234 000 000 0000"
+          onChange={(e) => updateMeta("whatsapp_number", e.target.value)}
+        />
+      </Field>
       <Field label="Office address" htmlFor="contact-office">
         <input
           id="contact-office"

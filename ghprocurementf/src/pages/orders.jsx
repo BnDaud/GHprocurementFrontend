@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { LuSearch, LuTruck, LuRefreshCw, LuArrowLeft, LuPencil, LuTrash2, LuX, LuFileText, LuImage } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import OrderMessages from "../component/ordermessages";
 import { authHeaders, notifyUnauthorized } from "../auth/auth";
 import {
   PageHeader,
@@ -180,6 +181,9 @@ function OrdersList() {
                     <span className="hidden sm:block text-xs text-muted tabular-nums">
                       Step {stepOf(r.status)} of {STAGES.length}
                     </span>
+                    {r.unread_messages > 0 && (
+                      <span className="inline-flex items-center rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-bold text-[#8a1f15]">{r.unread_messages} new {r.unread_messages === 1 ? "message" : "messages"}</span>
+                    )}
                     <Chip status={r.status} />
                   </div>
                 </Link>
@@ -469,6 +473,7 @@ function OrderDetail({ id }) {
             </form>
           </section>
 
+          <OrderMessages id={id} />
           <section className="rounded-2xl border border-line bg-white p-5 md:p-6" aria-labelledby="seen-title">
             <h2 id="seen-title" className="text-base font-extrabold text-purple mb-4">What the customer sees</h2>
             {ups.loading && updates.length === 0 ? (

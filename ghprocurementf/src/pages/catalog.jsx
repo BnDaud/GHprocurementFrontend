@@ -54,6 +54,7 @@ const Catalog = () => {
     min_quantity: 10,
     category: "",
     price: "",
+    weight_kg: "",
   });
 
   const update = (arg, value) => setItem((prev) => ({ ...prev, [arg]: value }));
@@ -101,6 +102,20 @@ const Catalog = () => {
         required
         value={item.price}
         onChange={(e) => update("price", e.target.value)}
+      />
+    </Field>,
+
+    <Field label="Weight of one unit (kg)" htmlFor="cat-weight" hint="Used by the cost estimator on the website. Leave empty to keep this product out of it.">
+      <input
+        id="cat-weight"
+        type="number"
+        min="0"
+        step="0.001"
+        inputMode="decimal"
+        placeholder="0.350"
+        className={inputClass}
+        value={item.weight_kg ?? ""}
+        onChange={(e) => update("weight_kg", e.target.value)}
       />
     </Field>,
 

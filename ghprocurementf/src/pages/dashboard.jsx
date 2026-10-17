@@ -16,6 +16,7 @@ import API from "../endpoints/endpoints";
 import { globalContext } from "../App";
 import { categoryLabel, secureUrl, formatPrice } from "./catalog";
 import { PageHeader, Spinner, ErrorBanner, btnPrimary } from "../component/ui";
+import NeedsAttention from "../component/attention";
 
 const stats = [
   {
@@ -130,6 +131,8 @@ const DashBoard = () => {
             : "Some dashboard data could not be loaded."}
         </ErrorBanner>
       )}
+
+      <NeedsAttention />
 
       <section
         aria-label="Totals"

@@ -90,6 +90,61 @@ function Metadata({ meta, updateMeta }) {
           ))}
         </select>
       </Field>
+      <div className="rounded-2xl border border-line p-4 md:p-5 flex flex-col gap-4">
+        <div>
+          <h3 className="text-sm font-extrabold text-purple">Cost estimator</h3>
+          <p className="mt-1 text-xs text-muted">
+            Shows a rough cost on the home page for catalog products that have a weight. Rates are in the price currency above. Leave both shipping rates empty to hide the estimator.
+          </p>
+        </div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
+          {[
+            ["air_rate_per_kg", "Air shipping per kg", "6.50", "meta-air"],
+            ["sea_rate_per_kg", "Sea shipping per kg", "1.20", "meta-sea"],
+          ].map(([key, label, ph, id]) => (
+            <Field key={key} label={label} htmlFor={id}>
+              <input
+                id={id}
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                className={inputClass}
+                value={meta[key] ?? ""}
+                placeholder={ph}
+                onChange={(e) => updateMeta(key, e.target.value === "" ? null : e.target.value)}
+              />
+            </Field>
+          ))}
+          <Field label="Duties and clearance (%)" htmlFor="meta-duty">
+            <input
+              id="meta-duty"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              inputMode="decimal"
+              className={inputClass}
+              value={meta.duty_percent ?? ""}
+              placeholder="20"
+              onChange={(e) => updateMeta("duty_percent", e.target.value === "" ? 0 : e.target.value)}
+            />
+          </Field>
+          <Field label="Range around the estimate (%)" htmlFor="meta-range">
+            <input
+              id="meta-range"
+              type="number"
+              min="0"
+              max="50"
+              inputMode="numeric"
+              className={inputClass}
+              value={meta.estimate_range_percent ?? ""}
+              placeholder="15"
+              onChange={(e) => updateMeta("estimate_range_percent", e.target.value === "" ? 0 : e.target.value)}
+            />
+          </Field>
+        </div>
+      </div>
     </div>
   );
 }
