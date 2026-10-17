@@ -10,6 +10,7 @@ const API = {
 
   catalogs: (arg = "") => `${BASEURL}/catalogs${arg && "/" + arg}/?format=json`,
   metadata: (arg = "") => `${BASEURL}/metadata${arg && "/" + arg}/?format=json`,
+  showcase: (arg = "") => `${BASEURL}/showcase${arg && "/" + arg}/?format=json`,
   faq: (arg = "") => `${BASEURL}/faqs${arg && "/" + arg}/?format=json`,
   services: (arg = "") => `${BASEURL}/services${arg && "/" + arg}/?format=json`,
   emails: () => `${BASEURL}/emails/`,

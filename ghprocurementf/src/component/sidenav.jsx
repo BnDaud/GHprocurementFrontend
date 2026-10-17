@@ -5,6 +5,7 @@ import {
   LuPackage,
   LuBriefcase,
   LuCircleHelp,
+  LuImages,
   LuUsers,
   LuMail,
   LuHistory,
@@ -35,6 +36,7 @@ export const navGroups = [
       { to: "/catalog", name: "Catalog", icon: <LuPackage className={iconClass} /> },
       { to: "/services", name: "Services", icon: <LuBriefcase className={iconClass} /> },
       { to: "/faqs", name: "FAQs", icon: <LuCircleHelp className={iconClass} /> },
+      { to: "/showcase", name: "Showcase", icon: <LuImages className={iconClass} /> },
     ],
   },
   {

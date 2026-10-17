@@ -9,6 +9,7 @@ import User from "./pages/user";
 
 import Services from "./pages/services";
 import Faqs from "./pages/faq";
+import Showcase from "./pages/showcase";
 import Mail from "./pages/mail";
 import SentMail from "./pages/sentmail";
 import Login from "./pages/login";
@@ -191,6 +192,7 @@ function App() {
               <Route path="/services" element={<Services />} />
               <Route path="/users" element={<User />} />
               <Route path="/faqs" element={<Faqs />} />
+              <Route path="/showcase" element={<Showcase />} />
               <Route path="/mail" element={<Mail />} />
               <Route path="/sent" element={<SentMail />} />
               <Route path="/orders" element={<Orders />} />
