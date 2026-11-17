@@ -63,7 +63,7 @@ function Contact({ meta, updateMeta }) {
       <Field
         label="How-to video for this CMS"
         htmlFor="contact-cms-video"
-        hint="A YouTube link. Only people signed in here see it: a &quot;How to use the CMS&quot; button in the side menu opens it."
+        hint="A YouTube link. Only people signed in here see it: a &quot;How to use the CMS&quot; button in the top bar opens it."
       >
         <input
           id="contact-cms-video" name="contact-cms-video" autoComplete="off"
