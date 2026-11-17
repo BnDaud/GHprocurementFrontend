@@ -19,6 +19,7 @@ import { globalContext } from "../App";
 import { currentUser } from "../auth/auth";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import HelpVideo from "./helpvideo";
 import Logo from "./../images/Logo.png";
 
 const iconClass = "text-[17px] shrink-0";
@@ -145,6 +146,9 @@ export const NavList = ({ onNavigate }) => {
         ))}
       </div>
     ))}
+    <div className="mt-3">
+      <HelpVideo />
+    </div>
   </nav>
   );
 };

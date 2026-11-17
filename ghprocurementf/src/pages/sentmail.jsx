@@ -77,6 +77,7 @@ function detailsMarkup(d, logo, kinds, fmtDate, fmtSize) {
     <table style="width:100%;border-collapse:collapse">
       ${row("Status", esc(d.status))}${row("Type", esc(kinds[d.kind] ?? d.kind))}
       ${row("To", esc((d.recipient_name ? `${d.recipient_name} · ` : "") + d.recipient))}
+      ${row("Cc", esc((d.cc || []).join(", ")))}${row("Bcc", esc((d.bcc || []).join(", ")))}
       ${row("Sent", esc(fmtDate(d.sent_at || d.created_at)))}
       ${row("Valid for", d.valid_days ? `${esc(d.valid_days)} days` : "")}
       ${row("Heading", esc(d.title))}${row("Order", esc(d.order_reference))}${row("Quoted total", esc(d.total))}
@@ -256,6 +257,8 @@ function Detail({ id, onClose, onChanged }) {
                   {data.recipient_name ? `${data.recipient_name} · ` : ""}
                   {data.recipient}
                 </Row>
+                {data.cc?.length ? <Row label="Cc">{data.cc.join(", ")}</Row> : null}
+                {data.bcc?.length ? <Row label="Bcc">{data.bcc.join(", ")}</Row> : null}
                 <Row label={isDraft ? "Saved" : "Sent"}>{fmtDate(data.sent_at || data.created_at)}</Row>
                 {data.valid_days ? (
                   <Row label="Valid for">{data.valid_days} days</Row>

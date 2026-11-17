@@ -121,12 +121,58 @@ const draftRows = (raw) => {
   }
 };
 
+const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+const MAX_COPIES = 10;
+// "a@x.com, b@x.com" -> ["a@x.com", "b@x.com"]
+const splitAddresses = (text) => String(text || "").split(/[\s,;]+/).filter(Boolean);
+
+// Type or paste addresses; each becomes a chip. The value stays one string ("a@x.com, b@x.com").
+function AddressInput({ id, value, onChange, invalid }) {
+  const [text, setText] = useState("");
+  const list = splitAddresses(value);
+  const commit = (raw) => {
+    const incoming = splitAddresses(raw);
+    if (!incoming.length) return;
+    const have = new Set(list.map((a) => a.toLowerCase()));
+    const fresh = incoming.filter((a) => !have.has(a.toLowerCase()) && have.add(a.toLowerCase()));
+    onChange([...list, ...fresh].join(", "));
+    setText("");
+  };
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-white px-2.5 py-2 focus-within:border-purple ${invalid ? "!border-[#b42318]" : ""}`}>
+      {list.map((a) => (
+        <span key={a} className={`inline-flex items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1 text-xs font-semibold ${EMAIL_RE.test(a) ? "bg-peach-100 text-ink" : "bg-[#fde7e5] text-[#b42318]"}`}>
+          {a}
+          <button type="button" aria-label={`Remove ${a}`} onClick={() => onChange(list.filter((x) => x !== a).join(", "))} className="rounded-full p-0.5 hover:bg-black/10">
+            <LuX className="text-[12px]" />
+          </button>
+        </span>
+      ))}
+      <input
+        id={id}
+        className="min-w-[180px] flex-1 bg-transparent py-1 text-sm outline-none"
+        value={text}
+        placeholder={list.length ? "Add another…" : "name@email.com"}
+        onChange={(e) => (/[\s,;]$/.test(e.target.value) ? commit(e.target.value) : setText(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); commit(text); }
+          else if (e.key === "Backspace" && !text && list.length) onChange(list.slice(0, -1).join(", "));
+        }}
+        onPaste={(e) => { e.preventDefault(); commit(e.clipboardData.getData("text")); }}
+        onBlur={() => commit(text)}
+      />
+    </div>
+  );
+}
+
 const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null, rfq_item: "", thumb: "" });
 
 function Mail() {
   const initalState = {
     subject: "",
     recipient: "",
+    cc: "", // several addresses, separated by commas, spaces or new lines
+    bcc: "",
     body: "",
     title: "",
     attachments: [],
@@ -153,6 +199,8 @@ function Mail() {
           kind: saved.kind || "outreach",
           recipient: saved.recipient || "",
           recipient_name: saved.recipient_name || "",
+          cc: (saved.cc || []).join(", "),
+          bcc: (saved.bcc || []).join(", "),
           subject: saved.subject || "",
           title: saved.title || "",
           body: saved.body || "",
@@ -217,6 +265,8 @@ function Mail() {
   };
 
   const isRfq = email.kind === "rfq_reply";
+  // Cc and Bcc stay tucked away until asked for (or already filled in)
+  const [showCopies, setShowCopies] = useState(Boolean(email.cc || email.bcc));
   const today = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -251,6 +301,12 @@ function Mail() {
     if (email.body.length === 0) next.body = "Write a message.";
     if (email.recipient.length === 0) next.recipient = "Enter the recipient's email.";
     if (email.subject.length === 0) next.subject = "Add a subject.";
+    for (const key of ["cc", "bcc"]) {
+      const list = splitAddresses(email[key]);
+      const wrong = list.find((a) => !EMAIL_RE.test(a));
+      if (wrong) next[key] = `"${wrong}" is not a valid email address.`;
+      else if (list.length > MAX_COPIES) next[key] = `Add at most ${MAX_COPIES} addresses.`;
+    }
     if (isRfq) {
       const bad = filled.findIndex((r) => !r.description.trim() || !(num(r.quantity) > 0) || r.unit_price === "" || num(r.unit_price) < 0);
       if (bad >= 0) next.items = `Row ${bad + 1}: add a description, a quantity and a price.`;
@@ -266,6 +322,8 @@ function Mail() {
       formData.append("body", email.body);
       formData.append("recipient", email.recipient);
       formData.append("subject", email.subject);
+      splitAddresses(email.cc).forEach((a) => formData.append("cc", a));
+      splitAddresses(email.bcc).forEach((a) => formData.append("bcc", a));
       // the API requires a title, so fall back to the subject
       formData.append("title", email.title || email.subject);
       formData.append("kind", email.kind);
@@ -314,6 +372,8 @@ function Mail() {
       if (email[k] !== undefined && email[k] !== null) f.append(k, email[k]);
     });
     f.append("currency", email.currency || "");
+    splitAddresses(email.cc).forEach((x) => f.append("cc", x));
+    splitAddresses(email.bcc).forEach((x) => f.append("bcc", x));
     f.append("items", JSON.stringify(rows.map((r) => ({ description: r.description, quantity: String(r.quantity), unit_price: String(r.unit_price) }))));
     if (draftId) f.append("draft_id", draftId);
     setDraftSaved(false);
@@ -443,7 +503,37 @@ function Mail() {
               onChange={(e) => updateEmail("recipient", e.target.value)}
             />
             {errorText("recipient")}
+            {!showCopies && (
+              <button type="button" onClick={() => setShowCopies(true)} className="mt-1.5 self-start text-xs font-bold text-purple underline underline-offset-2 hover:no-underline">
+                + Add Cc / Bcc
+              </button>
+            )}
           </Field>
+
+          {showCopies && (
+            <div className="rounded-xl border border-line bg-peach-50/50 p-4 flex flex-col gap-5">
+              <p className="text-xs text-muted">
+                You can fill in <b>both</b> boxes on the same email, and add as many addresses as you like in each (up to {MAX_COPIES}).
+                Type an address and press <b>Enter</b>, comma or space to add it. You can also paste a whole list.
+              </p>
+              <Field
+                label="Cc (optional)"
+                htmlFor="mail-cc"
+                hint="Cc means “carbon copy”: these people get a copy to keep in the loop. Everyone on the email, including the main recipient, can see who is on Cc."
+              >
+                <AddressInput id="mail-cc" value={email.cc} onChange={(v) => updateEmail("cc", v)} invalid={!!errors.cc} />
+                {errorText("cc")}
+              </Field>
+              <Field
+                label="Bcc (optional)"
+                htmlFor="mail-bcc"
+                hint="Bcc means “blind carbon copy”: these people get a copy secretly. Nobody else on the email can see them, and they cannot see each other."
+              >
+                <AddressInput id="mail-bcc" value={email.bcc} onChange={(v) => updateEmail("bcc", v)} invalid={!!errors.bcc} />
+                {errorText("bcc")}
+              </Field>
+            </div>
+          )}
 
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Subject" htmlFor="mail-subject">

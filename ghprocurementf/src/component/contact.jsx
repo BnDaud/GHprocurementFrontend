@@ -46,6 +46,34 @@ function Contact({ meta, updateMeta }) {
           onChange={(e) => updateMeta("office", e.target.value)}
         />
       </Field>
+      <Field
+        label="How-to video for the website"
+        htmlFor="contact-site-video"
+        hint="A YouTube link. When filled, a &quot;How to use this site&quot; link appears on the public website and opens the video. Leave empty to hide it."
+      >
+        <input
+          id="contact-site-video"
+          type="url"
+          className={inputClass}
+          value={meta.site_video_url ?? ""}
+          placeholder="https://www.youtube.com/watch?v=..."
+          onChange={(e) => updateMeta("site_video_url", e.target.value)}
+        />
+      </Field>
+      <Field
+        label="How-to video for this CMS"
+        htmlFor="contact-cms-video"
+        hint="A YouTube link. Only people signed in here see it: a &quot;How to use the CMS&quot; button in the side menu opens it."
+      >
+        <input
+          id="contact-cms-video"
+          type="url"
+          className={inputClass}
+          value={meta.cms_video_url ?? ""}
+          placeholder="https://www.youtube.com/watch?v=..."
+          onChange={(e) => updateMeta("cms_video_url", e.target.value)}
+        />
+      </Field>
     </div>
   );
 }
