@@ -5,7 +5,7 @@ import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 
 // A YouTube link (watch, share, shorts or embed) as an embeddable address; "" if it is not one.
-export function youtubeEmbed(url) {
+function youtubeEmbed(url) {
   try {
     const u = new URL(String(url || "").trim());
     const host = u.hostname.replace(/^www\.|^m\./, "");
@@ -22,7 +22,7 @@ export function youtubeEmbed(url) {
 }
 
 // Side-menu button that plays the CMS how-to video. Shows only when a link is saved in Settings.
-export default function HelpVideo() {
+export default function HelpVideo({ compact = false }) {
   const { data, doFetch } = useFetch();
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -41,9 +41,11 @@ export default function HelpVideo() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2.5 h-9 px-3 rounded-lg text-[13px] font-semibold text-ink/70 hover:bg-peach-100 hover:text-ink transition-colors"
+        aria-label="How to use the CMS"
+        className={`inline-flex items-center gap-2 rounded-xl bg-purple text-peach font-bold hover:brightness-110 transition ${compact ? "size-11 justify-center" : "h-9 px-4 text-[13px]"}`}
       >
-        <LuCirclePlay className="text-[17px] shrink-0" /> How to use the CMS
+        <LuCirclePlay className="text-[18px] shrink-0" />
+        {!compact && "How to use"}
       </button>
       {open &&
         createPortal(

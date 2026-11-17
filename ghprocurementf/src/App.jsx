@@ -19,6 +19,10 @@ import Inbox from "./pages/inbox";
 import Activity from "./pages/activity";
 import Orders from "./pages/orders";
 import Watermark from "./component/watermark";
+import Account from "./pages/account";
+import HelpVideo from "./component/helpvideo";
+import useIsSuper from "./hooks/useissuper";
+import { currentUser } from "./auth/auth";
 
 export const globalContext = createContext();
 
@@ -37,6 +41,7 @@ function App() {
   const [meta, setMeta] = useState({});
 
   const [authed, setAuthed] = useState(isSignedIn);
+  const isSuper = useIsSuper(); // null while unknown
   const [inboxUnread, setInboxUnread] = useState(0);
   const [inboxTotal, setInboxTotal] = useState(0);
   const [expired, setExpired] = useState(false);
@@ -109,6 +114,9 @@ function App() {
     setMenuOpen(false);
   };
 
+  // pages only the super admin may open (the API refuses everyone else as well)
+  const only = (page) => (isSuper === null ? null : isSuper ? page : <Navigate to="/" replace />);
+
   // nothing below mounts (so no API calls are made) until signed in
   if (!authed)
     return (
@@ -168,9 +176,18 @@ function App() {
 
         <div className="relative flex-1 min-w-0 flex flex-col">
           <Watermark className="top-16 md:top-0" />
+          {/* desktop top bar: the how-to video and who is signed in */}
+          <header className="hidden md:flex items-center justify-end gap-4 h-14 px-10 bg-white/80 backdrop-blur border-b border-line shrink-0 relative z-10">
+            <HelpVideo />
+            <div className="text-right leading-tight">
+              <div className="text-[13px] font-bold">{currentUser()?.name || currentUser()?.username || "Admin"}</div>
+              <div className="text-[11px] text-muted">{isSuper ? "Super admin" : "Admin"}</div>
+            </div>
+          </header>
           {/* phone top bar */}
           <header className="md:hidden flex items-center justify-between h-16 px-4 bg-peach-50 border-b border-peach-line shrink-0">
             <BrandLogo width={126} />
+            <HelpVideo compact />
             <button
               type="button"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -189,17 +206,18 @@ function App() {
               <Route path="/" element={<DashBoard />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/blog" element={<Navigate to="/catalog" replace />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/users" element={<User />} />
-              <Route path="/faqs" element={<Faqs />} />
+              <Route path="/services" element={only(<Services />)} />
+              <Route path="/users" element={only(<User />)} />
+              <Route path="/faqs" element={only(<Faqs />)} />
               <Route path="/showcase" element={<Showcase />} />
               <Route path="/mail" element={<Mail />} />
               <Route path="/sent" element={<SentMail />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/orders/:id" element={<Orders />} />
               <Route path="/inbox" element={<Inbox />} />
-              <Route path="/activity" element={<Activity />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/activity" element={only(<Activity />)} />
+              <Route path="/settings" element={only(<Settings />)} />
+              <Route path="/account" element={isSuper === null ? null : isSuper ? <Navigate to="/settings" replace /> : <Account />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

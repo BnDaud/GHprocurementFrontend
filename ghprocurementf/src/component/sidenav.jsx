@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LuLayoutDashboard,
@@ -14,12 +14,11 @@ import {
   LuActivity,
   LuTruck,
   LuLogOut,
+  LuUserCog,
 } from "react-icons/lu";
 import { globalContext } from "../App";
 import { currentUser } from "../auth/auth";
-import useFetch from "../hooks/usefetch";
-import API from "../endpoints/endpoints";
-import HelpVideo from "./helpvideo";
+import useIsSuper from "../hooks/useissuper";
 import Logo from "./../images/Logo.png";
 
 const iconClass = "text-[17px] shrink-0";
@@ -35,15 +34,15 @@ export const navGroups = [
     label: "Content",
     items: [
       { to: "/catalog", name: "Catalog", icon: <LuPackage className={iconClass} /> },
-      { to: "/services", name: "Services", icon: <LuBriefcase className={iconClass} /> },
-      { to: "/faqs", name: "FAQs", icon: <LuCircleHelp className={iconClass} /> },
+      { to: "/services", name: "Services", icon: <LuBriefcase className={iconClass} />, superOnly: true },
+      { to: "/faqs", name: "FAQs", icon: <LuCircleHelp className={iconClass} />, superOnly: true },
       { to: "/showcase", name: "Showcase", icon: <LuImages className={iconClass} /> },
     ],
   },
   {
     label: "People",
     items: [
-      { to: "/users", name: "Users", icon: <LuUsers className={iconClass} /> },
+      { to: "/users", name: "Users", icon: <LuUsers className={iconClass} />, superOnly: true },
       { to: "/orders", name: "Orders", icon: <LuTruck className={iconClass} /> },
       { to: "/inbox", name: "Inbox", icon: <LuInbox className={iconClass} />, badge: "inbox" },
       { to: "/mail", name: "Mail", icon: <LuMail className={iconClass} /> },
@@ -54,7 +53,8 @@ export const navGroups = [
     label: "System",
     items: [
       { to: "/activity", name: "Activity", icon: <LuActivity className={iconClass} />, superOnly: true },
-      { to: "/settings", name: "Settings", icon: <LuSettings className={iconClass} /> },
+      { to: "/settings", name: "Settings", icon: <LuSettings className={iconClass} />, superOnly: true },
+      { to: "/account", name: "My account", icon: <LuUserCog className={iconClass} />, regularOnly: true },
     ],
   },
 ];
@@ -90,12 +90,7 @@ const linkClass = ({ isActive }) =>
 
 export const NavList = ({ onNavigate }) => {
   const { inboxUnread, inboxTotal } = useContext(globalContext);
-  // ask the server who is signed in (the copy saved in the browser can be out of date)
-  const me = useFetch();
-  useEffect(() => {
-    me.doFetch({ url: API.me(), method: "GET" });
-  }, []);
-  const isSuper = me.data ? !!me.data.is_super_admin : !!currentUser()?.is_super_admin;
+  const isSuper = !!useIsSuper();
   return (
   <nav aria-label="Main" className="flex flex-col gap-0.5">
     {navGroups.map((group, i) => (
@@ -105,7 +100,7 @@ export const NavList = ({ onNavigate }) => {
             {group.label}
           </p>
         )}
-        {group.items.filter((item) => !item.superOnly || isSuper).map((item) => (
+        {group.items.filter((item) => (!item.superOnly || isSuper) && (!item.regularOnly || !isSuper)).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -146,9 +141,6 @@ export const NavList = ({ onNavigate }) => {
         ))}
       </div>
     ))}
-    <div className="mt-3">
-      <HelpVideo />
-    </div>
   </nav>
   );
 };
