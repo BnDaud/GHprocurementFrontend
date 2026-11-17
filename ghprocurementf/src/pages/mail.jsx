@@ -150,6 +150,12 @@ function AddressInput({ id, value, onChange, invalid }) {
       ))}
       <input
         id={id}
+        name={id}
+        type="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
         className="min-w-[180px] flex-1 bg-transparent py-1 text-sm outline-none"
         value={text}
         placeholder={list.length ? "Add another…" : "name@email.com"}
@@ -497,6 +503,8 @@ function Mail() {
             <input
               id="mail-recipient"
               type="email"
+              name="mail-recipient"
+              autoComplete="off"
               className={`${inputClass} ${invalid("recipient")}`}
               value={email.recipient}
               placeholder="name@email.com"

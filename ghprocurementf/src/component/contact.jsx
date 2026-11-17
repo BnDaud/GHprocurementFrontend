@@ -52,7 +52,7 @@ function Contact({ meta, updateMeta }) {
         hint="A YouTube link. When filled, a &quot;How to use this site&quot; link appears on the public website and opens the video. Leave empty to hide it."
       >
         <input
-          id="contact-site-video"
+          id="contact-site-video" name="contact-site-video" autoComplete="off"
           type="url"
           className={inputClass}
           value={meta.site_video_url ?? ""}
@@ -66,7 +66,7 @@ function Contact({ meta, updateMeta }) {
         hint="A YouTube link. Only people signed in here see it: a &quot;How to use the CMS&quot; button in the side menu opens it."
       >
         <input
-          id="contact-cms-video"
+          id="contact-cms-video" name="contact-cms-video" autoComplete="off"
           type="url"
           className={inputClass}
           value={meta.cms_video_url ?? ""}
