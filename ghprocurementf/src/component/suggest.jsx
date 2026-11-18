@@ -5,22 +5,29 @@ import { authHeaders } from "../auth/auth";
 
 // People matching what is being typed (customers, quote requesters, staff, inbox senders, past recipients).
 // The server ranks them: exact matches, then names/emails that start with the text, then who is emailed most.
+const memo = new Map();   // text -> { rows, at }: the same text typed again (or reached by backspacing) is answered at once
+const MEMO_MS = 60_000;
+
 export function useSuggest(text, { skip = [] } = {}) {
   const [list, setList] = useState([]);
   const ticket = useRef(0);
-  const q = (text || "").trim();
+  const q = (text || "").trim().toLowerCase();
   useEffect(() => {
     if (q.length < 1) { setList([]); return; }
     const mine = ++ticket.current;
+    const hit = memo.get(q);
+    if (hit && Date.now() - hit.at < MEMO_MS) { setList(hit.rows.filter((r) => !skip.includes(r.email))); return; }
+    const ctl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(API.contacts(q), { headers: authHeaders() });
+        const res = await fetch(API.contacts(q), { headers: authHeaders(), signal: ctl.signal });
         if (!res.ok) return;
         const rows = await res.json();
+        memo.set(q, { rows, at: Date.now() });
         if (mine === ticket.current) setList(rows.filter((r) => !skip.includes(r.email)));   // ignore answers to older text
-      } catch { /* offline: no suggestions, typing still works */ }
-    }, 180);
-    return () => clearTimeout(t);
+      } catch { /* offline, or the text changed again: no suggestions, typing still works */ }
+    }, 150);
+    return () => { clearTimeout(t); ctl.abort(); };   // typing on cancels the request for the text before it
   }, [q, skip.join("|")]);
   return q ? list : [];
 }
