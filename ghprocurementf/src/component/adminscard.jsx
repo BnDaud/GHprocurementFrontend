@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { LuShieldCheck, LuUserPlus, LuTrash2, LuX, LuEye, LuEyeOff } from "react-icons/lu";
+import { LuShieldCheck, LuUserPlus, LuTrash2, LuX, LuEye, LuEyeOff, LuPencil, LuPlus } from "react-icons/lu";
+import StaffEditor from "./staffeditor";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import { Field, Spinner, ErrorBanner, btnPrimary, btnSecondary, inputClass } from "./ui";
@@ -92,7 +93,14 @@ export default function AdminsCard() {
 
   const [admins, setAdmins] = useState([]);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ email: "", first_name: "", password: "" });
+  const [form, setForm] = useState({ email: "", first_name: "", last_name: "", designation: "", role: "admin", password: "" });
+  const desig = useFetch();
+  const addPos = useFetch();
+  const delPos = useFetch();
+  const [positions, setPositions] = useState([]);
+  const [newPos, setNewPos] = useState("");
+  const [posError, setPosError] = useState("");
+  const [editing, setEditing] = useState(null);
   const [show, setShow] = useState(false);
   const [formError, setFormError] = useState("");
   const [added, setAdded] = useState("");
@@ -105,8 +113,15 @@ export default function AdminsCard() {
     fetchMe({ url: API.me(), method: "GET" });
   }, []);
   useEffect(() => {
-    if (isSuper) fetchList({ url: API.admins(), method: "GET" });
+    if (isSuper) { fetchList({ url: API.admins(), method: "GET" }); desig.doFetch({ url: API.designations(), method: "GET" }); }
   }, [isSuper]);
+  useEffect(() => { if (Array.isArray(desig.data)) setPositions(desig.data); }, [desig.data]);
+  useEffect(() => {
+    if (addPos.success && addPos.data) { setPositions((p) => [...p, addPos.data]); setNewPos(""); setPosError(""); }
+  }, [addPos.success]);
+  useEffect(() => { if (addPos.err) setPosError(addPos.errDetail?.name?.[0] || addPos.errDetail?.detail || "That position could not be added."); }, [addPos.err]);
+  useEffect(() => { if (delPos.success) desig.doFetch({ url: API.designations(), method: "GET" }); }, [delPos.success]);
+  useEffect(() => { if (delPos.err) setPosError(delPos.errDetail?.detail || "That position could not be removed."); }, [delPos.err]);
   useEffect(() => {
     if (list) setAdmins(list);
   }, [list]);
@@ -116,7 +131,7 @@ export default function AdminsCard() {
     if (create.success && create.data) {
       setAdmins((prev) => [...prev, create.data]);
       setAdded(create.data.email);
-      setForm({ email: "", first_name: "", password: "" });
+      setForm({ email: "", first_name: "", last_name: "", designation: "", role: "admin", password: "" });
       setAdding(false);
       setFormError("");
     }
@@ -153,7 +168,7 @@ export default function AdminsCard() {
     create.doFetch({
       url: API.admins(),
       method: "POST",
-      body: { email: form.email.trim(), first_name: form.first_name.trim(), password: form.password },
+      body: { email: form.email.trim(), first_name: form.first_name.trim(), last_name: form.last_name.trim(), designation: form.designation, role: form.role, password: form.password },
     });
   };
 
@@ -170,11 +185,12 @@ export default function AdminsCard() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="s-admins" className="text-lg font-extrabold">
-            Administrators
+            Staff
           </h2>
           <p className="mt-1 text-[13px] text-muted max-w-xl">
-            People who can sign in to this CMS. Only a super admin can add or
-            remove them. Customer accounts are on the Users page.
+            People who can sign in to this CMS. Each has a registered name, a position in the company (shown in the
+            emails they send) and a permission level (Admin or Super admin). The position never changes what they can do.
+            Only a super admin can add, edit or remove staff. Customer accounts are on the Users page.
           </p>
         </div>
         {!adding && (
@@ -187,7 +203,7 @@ export default function AdminsCard() {
             className={btnPrimary}
           >
             <LuUserPlus className="text-lg" />
-            Add administrator
+            Add staff member
           </button>
         )}
       </div>
@@ -223,14 +239,23 @@ export default function AdminsCard() {
               placeholder="name@email.com"
             />
           </Field>
-          <Field label="First name (optional)" htmlFor="admin-first">
-            <input
-              id="admin-first"
-              className={inputClass}
-              value={form.first_name}
-              onChange={set("first_name")}
-              placeholder="Nia"
-            />
+          <Field label="First name" htmlFor="admin-first" hint="The registered name, used in the email signature.">
+            <input id="admin-first" className={inputClass} value={form.first_name} onChange={set("first_name")} placeholder="Nia" autoComplete="off" />
+          </Field>
+          <Field label="Last name" htmlFor="admin-last">
+            <input id="admin-last" className={inputClass} value={form.last_name} onChange={set("last_name")} placeholder="Okafor" autoComplete="off" />
+          </Field>
+          <Field label="Position in the company" htmlFor="admin-position" hint="Shown under their name in their emails.">
+            <select id="admin-position" className={inputClass} value={form.designation} onChange={set("designation")}>
+              <option value="">No position set</option>
+              {positions.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Permission level" htmlFor="admin-role" hint="Admin is the normal choice. A job title does not make someone a super admin.">
+            <select id="admin-role" className={inputClass} value={form.role} onChange={set("role")}>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super admin</option>
+            </select>
           </Field>
           <Field
             label="Temporary password"
@@ -260,10 +285,10 @@ export default function AdminsCard() {
           <div className="md:col-span-3 flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              disabled={create.loading || !form.email || !form.password}
+              disabled={create.loading || !form.email || !form.password || !form.first_name.trim()}
               className={btnPrimary}
             >
-              {create.loading ? <Spinner className="text-peach text-xl" /> : "Add administrator"}
+              {create.loading ? <Spinner className="text-peach text-xl" /> : "Add staff member"}
             </button>
             <button
               type="button"
@@ -300,7 +325,7 @@ export default function AdminsCard() {
               </div>
               <div className="min-w-0 flex-1 basis-48">
                 <div className="truncate font-bold text-sm">{a.name || a.username}</div>
-                <div className="truncate text-xs text-muted">{a.email}</div>
+                <div className="truncate text-xs text-muted">{a.designation ? `${a.designation} · ` : ""}{a.email}</div>
               </div>
               <Chip tone={a.role === "super_admin" ? "purple" : "grey"}>
                 {a.role === "super_admin" ? "Super admin" : "Admin"}
@@ -311,6 +336,10 @@ export default function AdminsCard() {
               <span className="hidden md:block w-28 text-xs text-muted">
                 Last sign-in: {fmtDate(a.last_login)}
               </span>
+              {!a.is_active && <Chip tone="grey">Inactive</Chip>}
+              <button type="button" aria-label={`Edit ${a.name || a.email}`} onClick={() => setEditing(a)} className="size-10 flex items-center justify-center rounded-[10px] text-purple hover:bg-lilac">
+                <LuPencil className="text-lg" />
+              </button>
               {a.protected ? (
                 <span className="w-10" aria-hidden="true" />
               ) : (
@@ -329,6 +358,36 @@ export default function AdminsCard() {
             </li>
           ))}
         </ul>
+      )}
+
+      <div className="rounded-xl border border-line p-4 flex flex-col gap-3">
+        <div>
+          <h3 className="text-sm font-extrabold">Positions</h3>
+          <p className="text-xs text-muted">The list staff are given a position from. Add the ones your company uses. A position that someone holds cannot be removed.</p>
+        </div>
+        <ul className="flex flex-wrap gap-2" aria-label="Positions">
+          {positions.map((p) => (
+            <li key={p.id} className="inline-flex items-center gap-1 rounded-full bg-lilac pl-3 pr-1 py-1 text-xs font-bold text-purple">
+              {p.name}
+              <button type="button" aria-label={`Remove ${p.name}`} onClick={() => { setPosError(""); delPos.doFetch({ url: API.designations(p.id), method: "DELETE" }); }} className="rounded-full p-1 hover:bg-white/70"><LuX className="text-[12px]" /></button>
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={(e) => { e.preventDefault(); if (newPos.trim()) addPos.doFetch({ url: API.designations(), method: "POST", body: { name: newPos.trim() } }); }} className="flex flex-wrap items-center gap-2">
+          <input aria-label="New position" className={`${inputClass} !w-72 max-w-full`} value={newPos} onChange={(e) => { setNewPos(e.target.value); setPosError(""); }} placeholder="e.g. Warehouse Supervisor" maxLength={80} autoComplete="off" />
+          <button type="submit" disabled={!newPos.trim() || addPos.loading} className={btnSecondary}><LuPlus /> Add position</button>
+          {posError && <p role="alert" className="text-sm font-semibold text-[#b42318]">{posError}</p>}
+        </form>
+      </div>
+
+      {editing && (
+        <StaffEditor
+          admin={editing}
+          positions={positions}
+          meId={me?.id}
+          onClose={() => setEditing(null)}
+          onSaved={(u) => { setAdmins((prev) => prev.map((x) => (x.id === u.id ? u : x))); setEditing(null); }}
+        />
       )}
 
       {toDelete && (

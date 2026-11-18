@@ -58,7 +58,8 @@ function detailsMarkup(d, logo, kinds, fmtDate, fmtSize) {
          <tr style="background:#f6f2f9;color:#6b6277;font-size:11px;text-transform:uppercase;letter-spacing:.06em"><td style="padding:8px 10px">Item</td><td style="padding:8px 10px;text-align:right">Qty</td><td style="padding:8px 10px;text-align:right">Unit price</td><td style="padding:8px 10px;text-align:right">Total</td></tr>
          ${q.rows.map((r) => `<tr style="border-top:1px solid #e6e0ec"><td style="padding:9px 10px;word-break:break-word">${r.has_image ? '<div style="font-size:11px;color:#6b6277;margin-bottom:3px">[ picture sent ]</div>' : ""}${esc(r.description)}</td><td style="padding:9px 10px;text-align:right">${esc(r.quantity)}</td><td style="padding:9px 10px;text-align:right">${esc(r.unit_price_text)}</td><td style="padding:9px 10px;text-align:right;font-weight:700">${esc(r.line_total_text)}</td></tr>`).join("")}
          <tr style="border-top:1px solid #e6e0ec"><td colspan="3" style="padding:7px 10px;text-align:right;color:#6b6277">Subtotal</td><td style="padding:7px 10px;text-align:right">${esc(q.subtotal_text)}</td></tr>
-         ${q.shipping_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">Delivery</td><td style="padding:5px 10px;text-align:right">${esc(q.shipping_text)}</td></tr>` : ""}
+         ${q.shipping_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">Logistic Fee</td><td style="padding:5px 10px;text-align:right">${esc(q.shipping_text)}</td></tr>` : ""}
+         ${q.service_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">Service Charge${q.service_percent ? ` (${esc(q.service_percent)}%)` : ""}</td><td style="padding:5px 10px;text-align:right">${esc(q.service_text)}</td></tr>` : ""}
          ${q.vat_text ? `<tr><td colspan="3" style="padding:5px 10px;text-align:right;color:#6b6277">VAT (${esc(q.vat_percent)}%)</td><td style="padding:5px 10px;text-align:right">${esc(q.vat_text)}</td></tr>` : ""}
          <tr style="border-top:1px solid #e6e0ec;color:#420e51;font-weight:800"><td colspan="3" style="padding:10px;text-align:right">Total</td><td style="padding:10px;text-align:right">${esc(q.total_text)}</td></tr>
        </table>`
@@ -76,6 +77,7 @@ function detailsMarkup(d, logo, kinds, fmtDate, fmtSize) {
     <div style="height:2px;background:#febcbd;margin:20px 0 8px"></div>
     <table style="width:100%;border-collapse:collapse">
       ${row("Status", esc(d.status))}${row("Type", esc(kinds[d.kind] ?? d.kind))}
+      ${row("From", esc(d.sender_name ? d.sender_name + (d.sender_title ? ", " + d.sender_title : "") : ""))}
       ${row("To", esc((d.recipient_name ? `${d.recipient_name} · ` : "") + d.recipient))}
       ${row("Cc", esc((d.cc || []).join(", ")))}${row("Bcc", esc((d.bcc || []).join(", ")))}
       ${row("Sent", esc(fmtDate(d.sent_at || d.created_at)))}
@@ -253,6 +255,7 @@ function Detail({ id, onClose, onChanged }) {
                   <StatusChip value={data.status} />
                 </Row>
                 <Row label="Type">{KINDS[data.kind] ?? data.kind}</Row>
+                {data.sender_name ? <Row label="From">{data.sender_name}{data.sender_title ? `, ${data.sender_title}` : ""}</Row> : null}
                 <Row label="To">
                   {data.recipient_name ? `${data.recipient_name} · ` : ""}
                   {data.recipient}
@@ -317,7 +320,8 @@ function Detail({ id, onClose, onChanged }) {
                           </tr>
                         ))}
                         <tr className="border-t border-line"><td colSpan={3} className="px-3 py-1.5 text-right text-muted">Subtotal</td><td className="px-3 py-1.5 text-right tabular-nums">{data.quote.subtotal_text}</td></tr>
-                        {data.quote.shipping_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">Delivery</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.shipping_text}</td></tr>}
+                        {data.quote.shipping_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">Logistic Fee</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.shipping_text}</td></tr>}
+                        {data.quote.service_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">Service Charge{data.quote.service_percent ? ` (${data.quote.service_percent}%)` : ""}</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.service_text}</td></tr>}
                         {data.quote.vat_text && <tr><td colSpan={3} className="px-3 py-1 text-right text-muted">VAT ({data.quote.vat_percent}%)</td><td className="px-3 py-1 text-right tabular-nums">{data.quote.vat_text}</td></tr>}
                         <tr className="border-t border-line font-extrabold text-purple"><td colSpan={3} className="px-3 py-2 text-right">Total</td><td className="px-3 py-2 text-right tabular-nums">{data.quote.total_text}</td></tr>
                       </tbody>

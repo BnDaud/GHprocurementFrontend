@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LuPaperclip, LuSend, LuX, LuCircleCheck, LuPlus, LuTrash2, LuImage, LuSave } from "react-icons/lu";
 import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
 import logoWhite from "../images/logo-white.png";
+import { authHeaders } from "../auth/auth";
+import { useSuggest, SuggestList, suggestKeys } from "../component/suggest";
+import { loadLocal, saveLocal, saveFiles, loadFiles, clearAutosave } from "../lib/autosave";
 import {
   PageHeader,
   Field,
@@ -129,17 +132,22 @@ const splitAddresses = (text) => String(text || "").split(/[\s,;]+/).filter(Bool
 // Type or paste addresses; each becomes a chip. The value stays one string ("a@x.com, b@x.com").
 function AddressInput({ id, value, onChange, invalid }) {
   const [text, setText] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const box = useRef(null);
   const list = splitAddresses(value);
+  const rows = useSuggest(open ? text : "", { skip: list.map((a) => a.toLowerCase()) });
   const commit = (raw) => {
     const incoming = splitAddresses(raw);
     if (!incoming.length) return;
     const have = new Set(list.map((a) => a.toLowerCase()));
     const fresh = incoming.filter((a) => !have.has(a.toLowerCase()) && have.add(a.toLowerCase()));
     onChange([...list, ...fresh].join(", "));
-    setText("");
+    setText(""); setActive(-1);
   };
+  const pick = (r) => commit(r.email);
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-white px-2.5 py-2 focus-within:border-purple ${invalid ? "!border-[#b42318]" : ""}`}>
+    <div ref={box} className={`relative flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-white px-2.5 py-2 focus-within:border-purple ${invalid ? "!border-[#b42318]" : ""}`}>
       {list.map((a) => (
         <span key={a} className={`inline-flex items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1 text-xs font-semibold ${EMAIL_RE.test(a) ? "bg-peach-100 text-ink" : "bg-[#fde7e5] text-[#b42318]"}`}>
           {a}
@@ -152,24 +160,50 @@ function AddressInput({ id, value, onChange, invalid }) {
         id={id}
         name={id}
         type="text"
+        role="combobox"
+        aria-expanded={rows.length > 0}
+        aria-controls={`${id}-list`}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
         className="min-w-[180px] flex-1 bg-transparent py-1 text-sm outline-none"
         value={text}
-        placeholder={list.length ? "Add another…" : "name@email.com"}
-        onChange={(e) => (/[\s,;]$/.test(e.target.value) ? commit(e.target.value) : setText(e.target.value))}
+        placeholder={list.length ? "Add another, or type a name…" : "Type a name or an email address"}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setOpen(true); setActive(-1); /[\s,;]$/.test(e.target.value) ? commit(e.target.value) : setText(e.target.value); }}
         onKeyDown={(e) => {
+          if (suggestKeys(e, { rows, active, setActive, onPick: pick, close: () => setOpen(false) })) return;
           if (e.key === "Enter") { e.preventDefault(); commit(text); }
           else if (e.key === "Backspace" && !text && list.length) onChange(list.slice(0, -1).join(", "));
         }}
         onPaste={(e) => { e.preventDefault(); commit(e.clipboardData.getData("text")); }}
-        onBlur={() => commit(text)}
+        onBlur={() => { commit(text); setOpen(false); }}
       />
+      <SuggestList id={`${id}-list`} rows={open ? rows : []} active={active} onPick={pick} onHover={setActive} anchor={box} />
     </div>
   );
 }
+
+// The form as a draft is stored on the server: only the shape is checked there, so half-written emails are fine.
+function buildDraftForm(e, id) {
+  const f = new FormData();
+  f.append("save_draft", "1");
+  ["kind", "recipient", "recipient_name", "subject", "title", "body", "valid_days", "shipping", "service_charge", "service_mode", "vat_percent", "rfq"].forEach((k) => {
+    if (e[k] !== undefined && e[k] !== null) f.append(k, e[k]);
+  });
+  f.append("currency", e.currency || "");
+  splitAddresses(e.cc).forEach((x) => f.append("cc", x));
+  splitAddresses(e.bcc).forEach((x) => f.append("bcc", x));
+  f.append("items", JSON.stringify((e.items || []).map((r) => ({ description: r.description, quantity: String(r.quantity), unit_price: String(r.unit_price) }))));
+  if (id) f.append("draft_id", id);
+  return f;
+}
+// what is saved on this computer: everything except the attached files (those go to IndexedDB) and pictures
+const plain = (e) => ({ ...e, attachments: [], items: (e.items || []).map((r) => ({ ...r, image: null })) });
+const hasContent = (e) =>
+  !!(e && (e.recipient || e.subject || e.body || e.title || e.cc || e.bcc || (e.items || []).some((r) => r.description || r.unit_price !== "")));
+const clock = (d) => new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 const blankRow = (description = "") => ({ description, quantity: "1", unit_price: "", image: null, rfq_item: "", thumb: "" });
 
@@ -187,7 +221,9 @@ function Mail() {
     valid_days: "",
     items: [], // the price table of a quotation
     currency: "",
-    shipping: "",
+    shipping: "", // the Logistic Fee
+    service_charge: "", // the sender's own fee, as an amount or as a percentage of the goods
+    service_mode: "fixed",
     vat_percent: "",
     rfq: "", // the order this quotation is for
   };
@@ -197,7 +233,13 @@ function Mail() {
   const reply = location.state?.reply;
   const order = location.state?.quote; // { id, reference, recipient, recipient_name, item }
   const saved = location.state?.draft; // a saved draft opened from Sent mail
-  const [draftId, setDraftId] = useState(saved?.id || null);
+  // an unfinished email kept on this computer (autosave): reopened where the person stopped
+  const [local] = useState(() => {
+    if (saved || order || reply) return null;
+    const l = loadLocal();
+    return l && hasContent(l.email) ? l : null;
+  });
+  const [draftId, setDraftId] = useState(saved?.id || local?.draftId || null);
   const [email, setEmail] = useState(() =>
     saved
       ? {
@@ -214,6 +256,8 @@ function Mail() {
           items: draftRows(saved.draft?.items),
           currency: saved.draft?.currency || "",
           shipping: saved.draft?.shipping || "",
+          service_charge: saved.draft?.service_charge || "",
+          service_mode: saved.draft?.service_mode || "fixed",
           vat_percent: saved.draft?.vat_percent || "",
           rfq: saved.rfq ? String(saved.rfq) : "",
         }
@@ -238,9 +282,14 @@ function Mail() {
           recipient_name: String(reply.recipient_name || ""),
           subject: String(reply.subject || ""),
         }
+      : local
+      ? { ...initalState, ...local.email, attachments: [], items: (local.email.items || []).map((r) => ({ ...blankRow(), ...r })) }
       : initalState
   );
   const meta = useFetch();
+  const meInfo = useFetch(); // who is writing: their registered name and position sign the email
+  useEffect(() => { meInfo.doFetch({ url: API.me(), method: "GET" }); }, []);
+  const who = { name: meInfo.data?.name || meInfo.data?.username || "GH Procurement", title: meInfo.data?.designation || "" };
   useEffect(() => {
     meta.doFetch({ url: API.metadata(1), method: "GET" }); // the currency chosen in Settings is the default
   }, []);
@@ -249,9 +298,11 @@ function Mail() {
   const filled = rows.filter((r) => r.description.trim() || r.unit_price !== "");
   const lines = filled.map((r) => Math.round(num(r.quantity) * num(r.unit_price) * 100) / 100);
   const subtotal = lines.reduce((a, b) => a + b, 0);
-  const ship = num(email.shipping);
-  const vat = Math.round((subtotal + ship) * num(email.vat_percent)) / 100;
-  const total = subtotal + ship + vat;
+  const ship = num(email.shipping); // Logistic Fee
+  const pct = email.service_mode === "percent";
+  const service = pct ? Math.round(subtotal * num(email.service_charge)) / 100 : num(email.service_charge);
+  const vat = Math.round((subtotal + ship + service) * num(email.vat_percent)) / 100;
+  const total = subtotal + ship + service + vat;
   const setRow = (i, key, value) => {
     setErrors((prev) => ({ ...prev, items: undefined }));
     setSent(false);
@@ -271,6 +322,16 @@ function Mail() {
   };
 
   const isRfq = email.kind === "rfq_reply";
+  // recipient suggestions
+  const recBox = useRef(null);
+  const [recOpen, setRecOpen] = useState(false);
+  const [recActive, setRecActive] = useState(-1);
+  const recRows = useSuggest(recOpen && !EMAIL_RE.test(email.recipient.trim()) ? email.recipient : "");
+  const pickRecipient = (r) => {
+    updateEmail("recipient", r.email);
+    if (isRfq && !email.recipient_name && r.name) updateEmail("recipient_name", r.name);
+    setRecOpen(false); setRecActive(-1);
+  };
   // Cc and Bcc stay tucked away until asked for (or already filled in)
   const [showCopies, setShowCopies] = useState(Boolean(email.cc || email.bcc));
   const today = new Date().toLocaleDateString("en-GB", {
@@ -316,7 +377,7 @@ function Mail() {
     if (isRfq) {
       const bad = filled.findIndex((r) => !r.description.trim() || !(num(r.quantity) > 0) || r.unit_price === "" || num(r.unit_price) < 0);
       if (bad >= 0) next.items = `Row ${bad + 1}: add a description, a quantity and a price.`;
-      else if ((ship || num(email.vat_percent)) && filled.length === 0) next.items = "Add at least one row to the price table, or clear delivery and VAT.";
+      else if ((ship || service || num(email.vat_percent)) && filled.length === 0) next.items = "Add at least one row to the price table, or clear the logistic fee, service charge and VAT.";
     }
     setErrors(next);
     if (Object.keys(next).length === 0) setSubmit(true);
@@ -343,6 +404,8 @@ function Mail() {
           pictures.forEach((f) => formData.append("item_images", f));
           formData.append("currency", currency);
           formData.append("shipping", email.shipping);
+          formData.append("service_charge", email.service_charge);
+          formData.append("service_mode", email.service_mode);
           formData.append("vat_percent", email.vat_percent);
         }
         if (email.rfq) formData.append("rfq", email.rfq);
@@ -353,6 +416,7 @@ function Mail() {
       });
       if (draftId) formData.append("draft_id", draftId);
 
+      sending.current = true;
       doFetch({ url: API.emails(), method: "POST", body: formData });
       setSubmit(false); // reset submit
     }
@@ -361,6 +425,8 @@ function Mail() {
   useEffect(() => {
     if (success) {
       setSent(true);
+      clearAutosave(); setRestoredAt(null); unsynced.current = false; setAuto({ state: "idle", at: null });
+      setTimeout(() => { sending.current = false; }, 4000);   // long enough for a copy still on its way to be thrown away
       setDraftId(null); // the server removes the draft once the email is on its way
       setDraftSaved(false);
       setSentReference(data?.reference || "");
@@ -372,18 +438,8 @@ function Mail() {
   const draftFetch = useFetch();
   const [draftSaved, setDraftSaved] = useState(false);
   const saveDraft = () => {
-    const f = new FormData();
-    f.append("save_draft", "1");
-    ["kind", "recipient", "recipient_name", "subject", "title", "body", "valid_days", "shipping", "vat_percent", "rfq"].forEach((k) => {
-      if (email[k] !== undefined && email[k] !== null) f.append(k, email[k]);
-    });
-    f.append("currency", email.currency || "");
-    splitAddresses(email.cc).forEach((x) => f.append("cc", x));
-    splitAddresses(email.bcc).forEach((x) => f.append("bcc", x));
-    f.append("items", JSON.stringify(rows.map((r) => ({ description: r.description, quantity: String(r.quantity), unit_price: String(r.unit_price) }))));
-    if (draftId) f.append("draft_id", draftId);
     setDraftSaved(false);
-    draftFetch.doFetch({ url: API.emails(), method: "POST", body: f });
+    draftFetch.doFetch({ url: API.emails(), method: "POST", body: buildDraftForm({ ...email, items: rows }, draftId) });
   };
   useEffect(() => {
     if (draftFetch.success && draftFetch.data?.id) {
@@ -392,6 +448,83 @@ function Mail() {
       setSent(false);
     }
   }, [draftFetch.success]);
+
+  // ---------------------------------------------------------------- autosave
+  // Every change is kept on this computer at once (text in localStorage, attachments in IndexedDB), and a copy goes to the
+  // server a moment after typing stops. With no connection the copy waits and is sent when it comes back. Nothing here
+  // needs the "Save as draft" button; that button still works.
+  const [auto, setAuto] = useState({ state: "idle", at: null });
+  const [restoredAt, setRestoredAt] = useState(local?.savedAt || null);
+  const draftIdRef = useRef(draftId);
+  const latest = useRef(email);
+  const startedAs = useRef(JSON.stringify(plain(email)));   // an untouched form (even a prefilled quotation) is not saved
+  const syncing = useRef(false);
+  const again = useRef(false);
+  const unsynced = useRef(false);
+  const sending = useRef(false);
+  useEffect(() => { draftIdRef.current = draftId; }, [draftId]);
+  latest.current = email;
+
+  const syncToServer = async () => {
+    const cur = latest.current;
+    if (sending.current || !hasContent(cur) || JSON.stringify(plain(cur)) === startedAs.current) return;
+    if (syncing.current) { again.current = true; return; }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) { unsynced.current = true; setAuto((a) => ({ ...a, state: "offline" })); return; }
+    syncing.current = true;
+    try {
+      const res = await fetch(API.emails(), { method: "POST", headers: authHeaders(), body: buildDraftForm(cur, draftIdRef.current) });
+      if (!res.ok) throw new Error(String(res.status));
+      const j = await res.json();
+      if (sending.current) {            // the email was sent while this copy was on its way: do not leave a stray draft behind
+        if (j.id && j.id !== draftIdRef.current) fetch(`${API.sentEmails(j.id)}discard/`, { method: "POST", headers: authHeaders() }).catch(() => {});
+      } else if (j.id) {
+        draftIdRef.current = j.id; setDraftId(j.id);
+        const l = loadLocal(); if (l) saveLocal({ ...l, draftId: j.id });
+        unsynced.current = false;
+        setAuto({ state: "synced", at: new Date() });
+      }
+    } catch {
+      unsynced.current = true;
+      setAuto((a) => ({ ...a, state: "offline" }));
+    } finally {
+      syncing.current = false;
+      if (again.current) { again.current = false; syncToServer(); }
+    }
+  };
+
+  useEffect(() => {
+    const snap = JSON.stringify(plain(email));
+    if (!hasContent(email)) { if (!sent) clearAutosave(); return; }
+    if (snap === startedAs.current) return;
+    saveLocal({ email: plain(email), draftId: draftIdRef.current });
+    setAuto((a) => ({ ...a, state: navigator.onLine === false ? "offline" : a.state === "synced" ? "saving" : "local" }));
+    const t1 = setTimeout(() => saveFiles(email.attachments), 300);
+    const t2 = setTimeout(syncToServer, 1500);     // a short pause after the last keystroke
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [email]);
+
+  useEffect(() => { if (err) sending.current = false; }, [err]);   // sending failed: autosave carries on
+
+  // back online (or the retry timer): send what is waiting
+  useEffect(() => {
+    const retry = () => { if (unsynced.current) syncToServer(); };
+    window.addEventListener("online", retry);
+    const timer = setInterval(retry, 15000);
+    return () => { window.removeEventListener("online", retry); clearInterval(timer); };
+  }, []);
+
+  // reopened after the tab was closed: bring the attached files back too
+  useEffect(() => {
+    if (local) loadFiles().then((files) => files.length && setEmail((prev) => ({ ...prev, attachments: files })));
+    else if (order || reply) {          // a different email was opened over an unfinished one: keep the older one safe on the server
+      const old = loadLocal();
+      if (old && hasContent(old.email)) fetch(API.emails(), { method: "POST", headers: authHeaders(), body: buildDraftForm(old.email, old.draftId) }).then(() => clearAutosave()).catch(() => {});
+    }
+  }, []);
+  const startFresh = () => {
+    clearAutosave(); setRestoredAt(null); setDraftId(null); draftIdRef.current = null;
+    setEmail(initalState); startedAs.current = JSON.stringify(plain(initalState)); setAuto({ state: "idle", at: null });
+  };
 
   const errorText = (key) =>
     errors[key] && (
@@ -407,6 +540,25 @@ function Mail() {
         title="Send email"
         subtitle="Compose a message from GH Procurement. Attachments are optional."
       />
+
+      {restoredAt && (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e4d3ea] bg-lilac px-4 py-3 text-sm font-semibold text-purple">
+          <LuSave className="text-lg" />
+          <span>We kept your unfinished email from {clock(restoredAt)} and opened it again, so you can carry on where you stopped.</span>
+          <button type="button" onClick={startFresh} className="ml-auto underline underline-offset-2 hover:no-underline">Start a new email</button>
+        </div>
+      )}
+      {auto.state !== "idle" && (
+        <p role="status" aria-live="polite" className={`-mt-3 text-xs font-semibold ${auto.state === "offline" ? "text-[#7a4b00]" : "text-muted"}`}>
+          {auto.state === "offline"
+            ? "No connection. Your changes are saved on this computer and will be sent as soon as you are back online."
+            : auto.state === "synced"
+            ? `All changes saved · ${clock(auto.at)}`
+            : auto.state === "saving"
+            ? "Saving…"
+            : "Saved on this computer. Saving a copy to the server…"}
+        </p>
+      )}
 
       {draftSaved && (
         <div role="status" className="flex flex-wrap items-center gap-2 rounded-xl border border-[#bfe0cb] bg-[#e6f2ea] px-4 py-3 text-sm font-semibold text-[#12633a]">
@@ -499,17 +651,28 @@ function Mail() {
             </div>
           </fieldset>
 
-          <Field label="Recipient" htmlFor="mail-recipient">
-            <input
-              id="mail-recipient"
-              type="email"
-              name="mail-recipient"
-              autoComplete="off"
-              className={`${inputClass} ${invalid("recipient")}`}
-              value={email.recipient}
-              placeholder="name@email.com"
-              onChange={(e) => updateEmail("recipient", e.target.value)}
-            />
+          <Field label="Recipient" htmlFor="mail-recipient" hint="Start typing a name or an email address, and pick from the people we know.">
+            <div className="relative" ref={recBox}>
+              <input
+                id="mail-recipient"
+                type="text"
+                inputMode="email"
+                role="combobox"
+                aria-expanded={recRows.length > 0}
+                aria-controls="mail-recipient-list"
+                name="mail-recipient"
+                autoComplete="off"
+                spellCheck={false}
+                className={`${inputClass} ${invalid("recipient")}`}
+                value={email.recipient}
+                placeholder="Type a name or name@email.com"
+                onFocus={() => setRecOpen(true)}
+                onBlur={() => setRecOpen(false)}
+                onChange={(e) => { setRecOpen(true); setRecActive(-1); updateEmail("recipient", e.target.value); }}
+                onKeyDown={(e) => suggestKeys(e, { rows: recRows, active: recActive, setActive: setRecActive, onPick: pickRecipient, close: () => setRecOpen(false) })}
+              />
+              <SuggestList id="mail-recipient-list" rows={recOpen ? recRows : []} active={recActive} onPick={pickRecipient} onHover={setRecActive} anchor={recBox} />
+            </div>
             {errorText("recipient")}
             {!showCopies && (
               <button type="button" onClick={() => setShowCopies(true)} className="mt-1.5 self-start text-xs font-bold text-purple underline underline-offset-2 hover:no-underline">
@@ -660,15 +823,27 @@ function Mail() {
                 )}
               </div>
               {rows.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.2fr]">
-                  <Field label="Delivery (optional)" htmlFor="mail-shipping">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Field label="Logistic Fee (optional)" htmlFor="mail-shipping" hint="Shipping, handling and clearing. Shown as its own line, apart from the product prices.">
                     <input id="mail-shipping" inputMode="decimal" className={inputClass} value={email.shipping} placeholder="0.00" onChange={(e) => updateEmail("shipping", e.target.value)} />
                   </Field>
-                  <Field label="VAT % (optional)" htmlFor="mail-vat">
+                  <Field label="Service Charge (optional)" htmlFor="mail-service" hint="Your own fee, on top of the goods and the logistic fee. Shown as its own line.">
+                    <div className="flex gap-2">
+                      <input id="mail-service" inputMode="decimal" className={`${inputClass} min-w-0 flex-1`} value={email.service_charge} placeholder={pct ? "10" : "0.00"} onChange={(e) => updateEmail("service_charge", e.target.value)} />
+                      <div role="group" aria-label="Service charge type" className="flex h-12 shrink-0 overflow-hidden rounded-xl border border-[#d5d0dd] text-sm font-bold">
+                        {[["fixed", currency], ["percent", "%"]].map(([k, l]) => (
+                          <button key={k} type="button" aria-pressed={email.service_mode === k} onClick={() => updateEmail("service_mode", k)} className={`px-3 ${email.service_mode === k ? "bg-purple text-peach" : "bg-white text-ink/70 hover:bg-bgcolor"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </Field>
+                  <Field label="VAT % (optional)" htmlFor="mail-vat" hint="Added on the goods, logistic fee and service charge.">
                     <input id="mail-vat" inputMode="decimal" className={inputClass} value={email.vat_percent} placeholder="7.5" onChange={(e) => updateEmail("vat_percent", e.target.value)} />
                   </Field>
                   <div className="flex flex-col justify-end rounded-xl bg-lilac/50 px-4 py-2.5 text-sm" aria-live="polite">
                     <span className="text-muted">Subtotal {money(subtotal, currency)}</span>
+                    {ship > 0 && <span className="text-muted">Logistic Fee {money(ship, currency)}</span>}
+                    {service > 0 && <span className="text-muted">Service Charge {money(service, currency)}</span>}
                     <span className="font-extrabold text-purple">Total {money(total, currency)}</span>
                   </div>
                 </div>
@@ -805,7 +980,8 @@ function Mail() {
                       </div>
                     ))}
                     <div className="px-3 py-1.5 border-t border-[#43185a] flex justify-between text-[#c7b0cf]"><span>Subtotal</span><span className="text-white tabular-nums">{money(subtotal, currency)}</span></div>
-                    {ship > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>Delivery</span><span className="text-white tabular-nums">{money(ship, currency)}</span></div>}
+                    {ship > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>Logistic Fee</span><span className="text-white tabular-nums">{money(ship, currency)}</span></div>}
+                    {service > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>Service Charge{pct ? ` (${num(email.service_charge)}%)` : ""}</span><span className="text-white tabular-nums">{money(service, currency)}</span></div>}
                     {num(email.vat_percent) > 0 && <div className="px-3 py-1 flex justify-between text-[#c7b0cf]"><span>VAT ({num(email.vat_percent)}%)</span><span className="text-white tabular-nums">{money(vat, currency)}</span></div>}
                     <div className="px-3 py-2.5 border-t border-[#43185a] flex justify-between font-extrabold text-peach"><span>TOTAL</span><span className="tabular-nums text-base">{money(total, currency)}</span></div>
                   </div>
@@ -817,7 +993,7 @@ function Mail() {
                 )}
                 {!isRfq && <div className="text-center"><span className="inline-block rounded-full bg-peach px-5 py-2 text-[12.5px] font-extrabold text-purple">Reply to this email</span></div>}
                 {isRfq && email.rfq && <div className="text-center"><span className="inline-block rounded-full bg-peach px-5 py-2 text-[12.5px] font-extrabold text-purple">See my order</span></div>}
-                <div className="border-t border-[#3d1649] pt-3 text-center text-[12.5px]">Regards,<br /><b className="text-peach">Lawal Abdur-Razaq</b></div>
+                <div className="border-t border-[#3d1649] pt-3 text-center text-[12.5px]">Regards,<br /><b className="text-peach">{who.name}</b>{who.title && <><br /><span className="text-[#f1e3f5]">{who.title}</span></>}<br /><span className="text-[#c7b0cf]">GH Procurement</span></div>
               </div>
             </div>
           </div>
