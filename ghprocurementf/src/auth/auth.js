@@ -24,9 +24,9 @@ const write = (key, value) => {
   }
 };
 
-// Signed out after 20 minutes with no activity (mouse, keys, touch, scrolling), in any tab. The last 5 minutes show a
-// countdown (see IdleCountdown) so nobody is signed out by surprise.
-export const IDLE_MS = 20 * 60 * 1000;
+// Signed out after 10 minutes with no activity (mouse, keys, touch, scrolling), in any tab. In the last 5 minutes a
+// modal with a countdown asks whether to stay signed in (see IdleCountdown), so nobody is signed out by surprise.
+export const IDLE_MS = 10 * 60 * 1000;
 export const WARN_MS = 5 * 60 * 1000;
 const KEY_ACTIVE = "gh_cms_active";
 let lastWrite = 0;
@@ -36,9 +36,14 @@ const idleFor = () => {
   return at ? Date.now() - at : 0; // sessions from before this rule have no stamp yet
 };
 
-function touch() {
+// Once the warning modal is up, moving the mouse does not close it: only "Stay signed in" (stayActive) does, so the
+// warning is never dismissed by accident.
+const warningShown = () => read(KEY_TOKEN) && IDLE_MS - idleFor() <= WARN_MS;
+
+function touch(force = false) {
   const now = Date.now();
-  if (now - lastWrite < 15000 || !read(KEY_TOKEN)) return;
+  if (!read(KEY_TOKEN)) return;
+  if (!force && (now - lastWrite < 15000 || warningShown())) return;
   lastWrite = now;
   write(KEY_ACTIVE, String(now));
 }
@@ -48,10 +53,9 @@ export function idleLeft() {
   return read(KEY_TOKEN) ? IDLE_MS - idleFor() : null;
 }
 
-// "Stay signed in": counts as activity right now (the mouse and keys do it too, at most every 15 seconds)
+// "Stay signed in": counts as activity right now and closes the warning (in every open tab)
 export function stayActive() {
-  lastWrite = 0;
-  touch();
+  touch(true);
 }
 
 export function signOut() {
@@ -74,7 +78,7 @@ export function getToken() {
 
 if (typeof window !== "undefined") {
   ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"].forEach((ev) =>
-    window.addEventListener(ev, touch, { passive: true, capture: true })
+    window.addEventListener(ev, () => touch(), { passive: true, capture: true })
   );
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
@@ -82,7 +86,7 @@ if (typeof window !== "undefined") {
       else touch();
     }
   });
-  // checks every 30 seconds, so an open page that nobody touches signs out by itself
+  // checks every 5 seconds, so an open page that nobody touches signs out by itself
   setInterval(() => {
     if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized("idle");
   }, 5000);

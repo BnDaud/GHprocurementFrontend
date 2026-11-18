@@ -135,7 +135,7 @@ function App() {
   if (!authed)
     return (
       <Login
-        notice={expired === "idle" ? "You were signed out after 20 minutes of inactivity. Sign in again." : expired ? "Your session ended. Sign in again." : ""}
+        notice={expired === "idle" ? "You were signed out after 10 minutes of inactivity. Sign in again." : expired ? "Your session ended. Sign in again." : ""}
         onSuccess={() => {
           setExpired(false);
           setAuthed(true);
@@ -164,7 +164,7 @@ function App() {
         refreshInbox,
       }}
     >
-      <IdleCountdown />
+      <IdleCountdown onSignOut={signOut} />
       <div className="relative flex h-screen supports-[height:100dvh]:h-dvh overflow-hidden bg-bgcolor">
         {/* desktop sidebar */}
         <div className="hidden md:block w-56 shrink-0">
