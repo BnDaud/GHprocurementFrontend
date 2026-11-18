@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { LuChevronRight, LuCircleCheck } from "react-icons/lu";
-import useFetch from "../hooks/usefetch";
 import API from "../endpoints/endpoints";
+import { authHeaders, notifyUnauthorized } from "../auth/auth";
 import { Spinner } from "./ui";
 
 const TONE = {
@@ -13,35 +13,74 @@ const TONE = {
 const LABEL = { quote: "waiting", accepted: "accepted", question: "waiting", stalled: "no update" };
 const age = (h) => (h < 48 ? `${Math.max(h, 0)}h` : `${Math.floor(h / 24)}d`);
 
-// What a customer is waiting for, worst first. It reads what the CMS already stores and refreshes by itself.
+// How often the list checks for changes in the background. Traffic is light for now, so every few minutes is plenty.
+const REFRESH_MS = 6 * 60 * 1000;
+const keyOf = (i) => `${i.kind}-${i.rfq_id}`;
+
+// Background refresh: new items go on top, items already shown keep their place (with fresh details), items that
+// are no longer waiting drop out. Nothing changes on screen when nothing changed.
+function merge(prev, fresh) {
+  const byKey = new Map(fresh.map((i) => [keyOf(i), i]));
+  const shown = new Set(prev.map(keyOf));
+  const added = fresh.filter((i) => !shown.has(keyOf(i)));
+  const kept = prev.filter((i) => byKey.has(keyOf(i))).map((i) => byKey.get(keyOf(i)));
+  return [...added, ...kept];
+}
+
+// What a customer is waiting for, worst first. It reads what the CMS already stores. Only the first load shows a
+// spinner; later refreshes happen in the background without touching the screen unless something changed.
 export default function NeedsAttention() {
-  const { data, loading, err, doFetch } = useFetch();
+  const [items, setItems] = useState(null);   // null until the first load
+  const [count, setCount] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const lastLoad = useRef(0);
+  const busy = useRef(false);
 
   useEffect(() => {
-    const load = () => doFetch({ url: API.attention(), method: "GET" });
-    load();
-    const again = () => document.visibilityState === "visible" && load();
-    const timer = setInterval(again, 60000);
-    document.addEventListener("visibilitychange", again);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", again);
+    let alive = true;
+    const load = async () => {
+      if (busy.current) return;
+      busy.current = true;
+      try {
+        const res = await fetch(API.attention(), { headers: { ...authHeaders(), "Content-Type": "application/json" } });
+        if (res.status === 401) { notifyUnauthorized(); return; }
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        if (!alive) return;
+        const fresh = data?.items ?? [];
+        lastLoad.current = Date.now();
+        setFailed(false);
+        setCount(data?.count ?? fresh.length);
+        setItems((prev) => (prev === null ? fresh : merge(prev, fresh)));
+      } catch {
+        // first load: say so; a background refresh that fails keeps the list on screen as it is
+        if (alive && lastLoad.current === 0) setFailed(true);
+      } finally {
+        busy.current = false;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    load();
+    const timer = setInterval(() => document.visibilityState === "visible" && load(), REFRESH_MS);
+    const onShow = () => document.visibilityState === "visible" && Date.now() - lastLoad.current >= REFRESH_MS && load();
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, []);
 
-  const items = data?.items ?? [];
   return (
     <section aria-labelledby="attention-title" className="rounded-2xl border border-line bg-white">
       <div className="flex items-center justify-between px-5 md:px-6 py-5 border-b border-line">
         <h2 id="attention-title" className="text-lg font-extrabold">Needs attention</h2>
-        {data && items.length > 0 && (
-          <span className="rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-bold text-[#8a1f15]">{data.count} waiting</span>
+        {items && items.length > 0 && (
+          <span className="rounded-full bg-[#fdeceb] px-2.5 py-1 text-xs font-bold text-[#8a1f15]">{count} waiting</span>
         )}
       </div>
-      {loading && !data ? (
+      {items === null && !failed ? (
         <div className="flex justify-center py-10"><Spinner className="text-3xl" /></div>
-      ) : err && !data ? (
+      ) : items === null ? (
         <p className="px-6 py-8 text-center text-sm text-muted">This list could not be loaded right now.</p>
       ) : items.length === 0 ? (
         <p className="flex items-center justify-center gap-2 px-6 py-8 text-center text-sm text-muted">
