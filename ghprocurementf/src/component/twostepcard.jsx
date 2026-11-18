@@ -94,6 +94,9 @@ function RecoveryCodes({ codes, onDone }) {
   );
 }
 
+// an authenticator code is complete when it is six digits (the app sometimes shows them as "123 456")
+const isFullCode = (v) => /^\d{6}$/.test(String(v).replace(/\s/g, ""));
+
 // password + current code, needed to change anything sensitive
 function ConfirmWithCode({ title, action, busy, error, onSubmit, onCancel, danger }) {
   const [password, setPassword] = useState("");
@@ -129,7 +132,11 @@ function ConfirmWithCode({ title, action, busy, error, onSubmit, onCancel, dange
             inputMode="numeric"
             className={inputClass}
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setCode(v);
+              if (password && !busy && isFullCode(v)) onSubmit(password, v);   // password already typed and the code is complete
+            }}
             placeholder="123456"
           />
         </Field>
@@ -159,7 +166,7 @@ function ConfirmWithCode({ title, action, busy, error, onSubmit, onCancel, dange
   );
 }
 
-export default function TwoStepCard() {
+export default function TwoStepCard({ onEnabled }) {
   const { data: me, loading, err, doFetch } = useFetch();
   const [mode, setMode] = useState("idle"); // idle | setup | codes | disable | regenerate
   const [setup, setSetup] = useState(null); // { secret, qr }
@@ -203,11 +210,12 @@ export default function TwoStepCard() {
     setMode("setup");
   };
 
-  const confirm = async (e) => {
-    e.preventDefault();
+  const confirm = async (e, value = code) => {
+    e?.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
-    const r = await mfaConfirm(code);
+    const r = await mfaConfirm(value);
     setBusy(false);
     if (!r.ok) {
       setError(r.error);
@@ -334,8 +342,10 @@ export default function TwoStepCard() {
                 className={`${inputClass} max-w-48 text-center text-lg tracking-[0.25em] font-bold`}
                 value={code}
                 onChange={(e) => {
-                  setCode(e.target.value);
+                  const v = e.target.value;
+                  setCode(v);
                   setError("");
+                  if (isFullCode(v)) confirm(null, v);   // six digits: turn it on straight away
                 }}
                 placeholder="123456"
               />
@@ -361,14 +371,14 @@ export default function TwoStepCard() {
 
       {/* RECOVERY CODES (shown once) */}
       {mode === "codes" && (
-        <RecoveryCodes codes={codes} onDone={() => { setCodes([]); reset(); }} />
+        <RecoveryCodes codes={codes} onDone={() => { setCodes([]); reset(); onEnabled?.(); }} />
       )}
 
       {/* ON */}
       {enabled === true && mode === "idle" && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-ink/80">
-            Signing in now asks for a code from your app after the password.
+            Two-step verification is required for every staff account. Signing in asks for a code from your app after the password.
             You have{" "}
             <b data-testid="codes-left" className={left <= 3 ? "text-[#b42318]" : ""}>
               {left} recovery code{left === 1 ? "" : "s"}
@@ -379,9 +389,6 @@ export default function TwoStepCard() {
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={() => { setError(""); setMode("regenerate"); }} className={btnSecondary}>
               New recovery codes
-            </button>
-            <button type="button" onClick={() => { setError(""); setMode("disable"); }} className={btnSecondary}>
-              Turn off
             </button>
           </div>
         </div>

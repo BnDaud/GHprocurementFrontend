@@ -93,7 +93,7 @@ export default function AdminsCard() {
 
   const [admins, setAdmins] = useState([]);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ email: "", first_name: "", last_name: "", designation: "", role: "admin", password: "" });
+  const [form, setForm] = useState({ email: "", first_name: "", last_name: "", designation: "", role: "", password: "" });
   const desig = useFetch();
   const addPos = useFetch();
   const delPos = useFetch();
@@ -131,7 +131,7 @@ export default function AdminsCard() {
     if (create.success && create.data) {
       setAdmins((prev) => [...prev, create.data]);
       setAdded(create.data.email);
-      setForm({ email: "", first_name: "", last_name: "", designation: "", role: "admin", password: "" });
+      setForm({ email: "", first_name: "", last_name: "", designation: "", role: "", password: "" });
       setAdding(false);
       setFormError("");
     }
@@ -245,14 +245,15 @@ export default function AdminsCard() {
           <Field label="Last name" htmlFor="admin-last">
             <input id="admin-last" className={inputClass} value={form.last_name} onChange={set("last_name")} placeholder="Okafor" autoComplete="off" />
           </Field>
-          <Field label="Position in the company" htmlFor="admin-position" hint="Shown under their name in their emails.">
-            <select id="admin-position" className={inputClass} value={form.designation} onChange={set("designation")}>
-              <option value="">No position set</option>
+          <Field label="Position in the company (required)" htmlFor="admin-position" hint="Shown under their name in their emails. Add new positions below.">
+            <select id="admin-position" required className={inputClass} value={form.designation} onChange={set("designation")}>
+              <option value="" disabled>Choose a position</option>
               {positions.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>
           </Field>
-          <Field label="Permission level" htmlFor="admin-role" hint="Admin is the normal choice. A job title does not make someone a super admin.">
-            <select id="admin-role" className={inputClass} value={form.role} onChange={set("role")}>
+          <Field label="Permission level (required)" htmlFor="admin-role" hint="Admin is the normal choice. A job title does not make someone a super admin.">
+            <select id="admin-role" required className={inputClass} value={form.role} onChange={set("role")}>
+              <option value="" disabled>Choose a level</option>
               <option value="admin">Admin</option>
               <option value="super_admin">Super admin</option>
             </select>
@@ -285,7 +286,7 @@ export default function AdminsCard() {
           <div className="md:col-span-3 flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              disabled={create.loading || !form.email || !form.password || !form.first_name.trim()}
+              disabled={create.loading || !form.email || !form.password || !form.first_name.trim() || !form.designation || !form.role}
               className={btnPrimary}
             >
               {create.loading ? <Spinner className="text-peach text-xl" /> : "Add staff member"}

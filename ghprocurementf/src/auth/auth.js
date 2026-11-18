@@ -24,8 +24,10 @@ const write = (key, value) => {
   }
 };
 
-// Signed out after an hour with no activity (mouse, keys, touch, scrolling), in any tab.
-export const IDLE_MS = 60 * 60 * 1000;
+// Signed out after 20 minutes with no activity (mouse, keys, touch, scrolling), in any tab. The last 5 minutes show a
+// countdown (see IdleCountdown) so nobody is signed out by surprise.
+export const IDLE_MS = 20 * 60 * 1000;
+export const WARN_MS = 5 * 60 * 1000;
 const KEY_ACTIVE = "gh_cms_active";
 let lastWrite = 0;
 
@@ -39,6 +41,17 @@ function touch() {
   if (now - lastWrite < 15000 || !read(KEY_TOKEN)) return;
   lastWrite = now;
   write(KEY_ACTIVE, String(now));
+}
+
+// milliseconds left before the inactivity sign-out, or null when nobody is signed in
+export function idleLeft() {
+  return read(KEY_TOKEN) ? IDLE_MS - idleFor() : null;
+}
+
+// "Stay signed in": counts as activity right now (the mouse and keys do it too, at most every 15 seconds)
+export function stayActive() {
+  lastWrite = 0;
+  touch();
 }
 
 export function signOut() {
@@ -65,14 +78,14 @@ if (typeof window !== "undefined") {
   );
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized();
+      if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized("idle");
       else touch();
     }
   });
   // checks every 30 seconds, so an open page that nobody touches signs out by itself
   setInterval(() => {
-    if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized();
-  }, 30000);
+    if (read(KEY_TOKEN) && idleFor() > IDLE_MS) notifyUnauthorized("idle");
+  }, 5000);
 }
 
 export const TOKEN_STORAGE_KEY = KEY_TOKEN;
@@ -93,10 +106,22 @@ export const authHeaders = () => {
 };
 
 // the API said 401: the session is over (expired, or the password changed elsewhere)
-export function notifyUnauthorized() {
+export function notifyUnauthorized(reason = "") {
   signOut();
-  window.dispatchEvent(new Event("gh-session-expired"));
+  window.dispatchEvent(new CustomEvent("gh-session-expired", { detail: { idle: reason === "idle" } }));
 }
+
+// ---- trusted computer: after a full sign-in (password and app code) this browser holds a token that lets the same
+// person sign in again for 3 hours without the code. The server checks and expires it; this is only where it is kept.
+const KEY_TRUST = "gh_cms_trusted";
+const trustMap = () => { try { return JSON.parse(read(KEY_TRUST) || "{}") || {}; } catch { return {}; } };
+const trustFor = (email) => trustMap()[String(email).trim().toLowerCase()] || "";
+const setTrust = (email, token) => {
+  const m = trustMap(); const k = String(email).trim().toLowerCase();
+  if (token) m[k] = token; else delete m[k];
+  write(KEY_TRUST, JSON.stringify(m));
+};
+let pendingEmail = "";
 
 function keep({ token, expires_in, user }) {
   write(KEY_TOKEN, token);
@@ -126,11 +151,13 @@ async function post(path, body, withAuth = false) {
 }
 
 export async function login(email, password) {
-  const { res, data } = await post("/auth/login/", { email: email.trim(), password });
+  pendingEmail = email.trim();
+  const { res, data } = await post("/auth/login/", { email: email.trim(), password, device_token: trustFor(email) });
   if (!res) {
     return { ok: false, error: "Could not reach the server. Check your connection and try again." };
   }
   if (res.ok && data.mfa_required) {
+    setTrust(pendingEmail, "");   // the server did not accept the trust token (old, or the password changed): it is not used again
     // password accepted; the app code is still needed before there is a session
     return { ok: false, mfaRequired: true, mfaToken: data.mfa_token };
   }
@@ -155,6 +182,7 @@ export async function verifyMfa(mfaToken, code) {
   }
   if (res.ok) {
     keep(data);
+    if (data.device_token) setTrust(pendingEmail, data.device_token);   // this computer is trusted for the next 3 hours
     return { ok: true, usedRecovery: !!data.used_recovery_code, recoveryLeft: data.recovery_codes_left };
   }
   if (data.restart) return { ok: false, restart: true, error: data.detail };

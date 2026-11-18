@@ -30,6 +30,9 @@ function useFetch() {
       });
 
       if (res.status === 401) notifyUnauthorized();
+      if (res.status === 403) {
+        try { if ((await res.clone().json())?.code === "mfa_setup_required") window.dispatchEvent(new Event("gh-mfa-required")); } catch { /* not JSON */ }
+      }
 
       if (!res.ok) {
         let errorData;

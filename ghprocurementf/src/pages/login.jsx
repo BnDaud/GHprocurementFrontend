@@ -5,6 +5,9 @@ import { login, verifyMfa } from "../auth/auth";
 import { Field, Spinner, btnPrimary, inputClass } from "../component/ui";
 import Watermark from "../component/watermark";
 
+// an authenticator code is complete when it is six digits (the app sometimes shows them as "123 456")
+const isFullCode = (v) => /^\d{6}$/.test(String(v).replace(/\s/g, ""));
+
 export default function Login({ onSuccess, notice = "" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,12 +50,13 @@ export default function Login({ onSuccess, notice = "" }) {
     setError(res.error);
   };
 
-  const submitCode = async (e) => {
-    e.preventDefault();
+  // `value` lets the code that was just typed (or pasted) go straight in, before the state has caught up
+  const submitCode = async (e, value = code) => {
+    e?.preventDefault();
     if (busy) return;
     setBusy(true);
     setError("");
-    const res = await verifyMfa(mfaToken, code);
+    const res = await verifyMfa(mfaToken, value);
     setBusy(false);
     if (res.ok) {
       onSuccess();
@@ -110,8 +114,10 @@ export default function Login({ onSuccess, notice = "" }) {
               maxLength={useRecovery ? 12 : 7}
               value={code}
               onChange={(e) => {
-                setCode(e.target.value);
+                const v = e.target.value;
+                setCode(v);
                 setError("");
+                if (!useRecovery && isFullCode(v)) submitCode(null, v);   // six digits: no need to press anything
               }}
               placeholder={useRecovery ? "XXXXX-XXXXX" : "123456"}
               className={`${inputClass} text-center text-lg tracking-[0.25em] font-bold`}

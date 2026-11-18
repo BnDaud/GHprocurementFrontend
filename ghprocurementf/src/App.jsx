@@ -20,6 +20,10 @@ import Activity from "./pages/activity";
 import Orders from "./pages/orders";
 import Watermark from "./component/watermark";
 import Account from "./pages/account";
+import MfaGate from "./component/mfagate";
+import IdleCountdown from "./component/idlecountdown";
+import useFetch from "./hooks/usefetch";
+import { Spinner } from "./component/ui";
 import HelpVideo from "./component/helpvideo";
 import useIsSuper from "./hooks/useissuper";
 import { currentUser } from "./auth/auth";
@@ -42,6 +46,14 @@ function App() {
 
   const [authed, setAuthed] = useState(isSignedIn);
   const isSuper = useIsSuper(); // null while unknown
+  // two-step verification is compulsory: someone who has not set it up sees only the setup screen
+  const gate = useFetch();
+  const checkGate = () => gate.doFetch({ url: API.me(), method: "GET" });
+  useEffect(() => { if (authed) checkGate(); }, [authed]);
+  useEffect(() => {
+    window.addEventListener("gh-mfa-required", checkGate);   // the server refused a request for this reason
+    return () => window.removeEventListener("gh-mfa-required", checkGate);
+  }, []);
   const [inboxUnread, setInboxUnread] = useState(0);
   const [inboxTotal, setInboxTotal] = useState(0);
   const [expired, setExpired] = useState(false);
@@ -51,8 +63,8 @@ function App() {
 
   // the API rejected our token (expired, or the password changed elsewhere)
   useEffect(() => {
-    const onExpired = () => {
-      setExpired(true);
+    const onExpired = (e) => {
+      setExpired(e?.detail?.idle ? "idle" : true);
       setAuthed(false);
     };
     window.addEventListener("gh-session-expired", onExpired);
@@ -118,10 +130,12 @@ function App() {
   const only = (page) => (isSuper === null ? null : isSuper ? page : <Navigate to="/" replace />);
 
   // nothing below mounts (so no API calls are made) until signed in
+  if (authed && gate.data && gate.data.mfa_enabled === false) return <MfaGate onDone={checkGate} onSignOut={signOut} />;
+  if (authed && !gate.data && !gate.err) return <div className="min-h-screen flex items-center justify-center bg-bgcolor"><Spinner className="text-3xl" /></div>;
   if (!authed)
     return (
       <Login
-        notice={expired ? "Your session ended. Sign in again." : ""}
+        notice={expired === "idle" ? "You were signed out after 20 minutes of inactivity. Sign in again." : expired ? "Your session ended. Sign in again." : ""}
         onSuccess={() => {
           setExpired(false);
           setAuthed(true);
@@ -150,6 +164,7 @@ function App() {
         refreshInbox,
       }}
     >
+      <IdleCountdown />
       <div className="relative flex h-screen supports-[height:100dvh]:h-dvh overflow-hidden bg-bgcolor">
         {/* desktop sidebar */}
         <div className="hidden md:block w-56 shrink-0">
